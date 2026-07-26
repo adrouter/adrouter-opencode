@@ -18,7 +18,7 @@ messages, tool inputs, tool results, or assistant response text.
 ## Install
 
 ```sh
-opencode plugin @adrouter/opencode@beta
+opencode plugin --global @adrouter/opencode@beta
 ```
 
 OpenCode detects both package targets:
@@ -27,6 +27,11 @@ OpenCode detects both package targets:
 - `@adrouter/opencode/tui` renders the terminal panel.
 
 The package supports OpenCode `>=1.18.4 <2`.
+
+Global installation is the recommended default so the provider, authentication
+hook, and TUI panel are available from every workspace. To keep AdRouter scoped
+to one Git worktree instead, run the command without `--global` from that
+worktree. A direct `npm install` does not activate an OpenCode plugin.
 
 ## Authenticate
 
@@ -168,6 +173,10 @@ No OpenCode patch is required.
 
 ## Troubleshooting
 
+- `Unknown provider "adrouter"`: the plugin is not active in the current config
+  scope. Run `opencode plugin --global @adrouter/opencode@beta`, then retry the
+  login command. Use `opencode models adrouter` to verify registration before
+  entering a credential.
 - `401` or an authentication message: set `ADROUTER_API_KEY` or run
   `opencode auth login --provider adrouter`.
 - `invalid_model`: select one of the registered AdRouter model IDs or check

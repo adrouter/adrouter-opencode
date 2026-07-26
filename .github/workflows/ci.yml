@@ -28,6 +28,6 @@ jobs:
       - run: bun run build
       - run: bun run audit
       - run: bun run package:check
-      - name: Validate OpenCode 1.18.4 resolved model API IDs
+      - name: Validate OpenCode plugin installation, models, and auth discovery
         if: runner.os == 'Linux'
-        run: bun scripts/opencode-model-check.ts
+        run: bun run plugin:check

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.0-beta.3
+
+- Made global OpenCode installation the default documented setup and clarified
+  that provider discovery requires the plugin in the active config scope.
+- Added real OpenCode installer, model-registration, and non-secret auth-hook
+  regression checks for OpenCode 1.18.4 and 1.18.5.
+- Added candidate-first npm publication, cross-platform registry verification,
+  explicit `beta`/`latest` promotion, and exact GitHub artifact verification.
 - Removed the one-time npm bootstrap workflow after trusted publishing setup.
 - Made release checksum files portable after download and replaced the
   deprecated release action with the GitHub CLI.

@@ -1,32 +1,151 @@
-name: Publish npm beta
+name: Promote staged beta
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Immutable v* release tag to publish
+        description: Immutable v* release tag to promote
         required: true
         type: string
+      phase:
+        description: Publish the candidate or finalize npm and GitHub
+        required: true
+        type: choice
+        options:
+          - publish-candidate
+          - finalize-release
 
-permissions:
-  contents: read
-  id-token: write
+permissions: {}
+
+concurrency:
+  group: promote-${{ inputs.tag }}
+  cancel-in-progress: false
 
 jobs:
-  publish:
+  verify-and-publish:
     runs-on: ubuntu-latest
     environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - name: Refuse release operations outside the canonical repository
+        env:
+          ACTUAL_REPOSITORY: ${{ github.repository }}
+        run: test "${ACTUAL_REPOSITORY}" = "adrouter/adrouter-opencode"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.tag }}
-      - uses: oven-sh/setup-bun@v2
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.3.14
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+      - name: Pin an OIDC-capable npm CLI
+        run: npm install --global npm@11.12.1
       - run: bun install --frozen-lockfile
       - run: bun run release:check
-      - run: npm publish --tag beta --access public --provenance
+      - name: Download the recorded draft assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir release-assets
+          gh release download "${{ inputs.tag }}" \
+            --pattern "*.tgz" \
+            --pattern "SHA256SUMS" \
+            --pattern "npm-artifacts.json" \
+            --dir release-assets
+      - run: bun scripts/npm-release.ts verify release-assets "${{ inputs.tag }}"
+      - name: Publish the exact tarball under candidate with npm OIDC
+        if: ${{ inputs.phase == 'publish-candidate' }}
+        run: npm publish release-assets/*.tgz --tag candidate --access public --ignore-scripts --provenance
+      - name: Verify candidate publication
+        if: ${{ inputs.phase == 'publish-candidate' }}
+        run: bun scripts/npm-release.ts registry release-assets/npm-artifacts.json candidate
+      - name: Verify resumable publication
+        if: ${{ inputs.phase == 'finalize-release' }}
+        run: bun scripts/npm-release.ts registry release-assets/npm-artifacts.json resumable
+
+  registry-install:
+    name: registry-${{ matrix.os }}-opencode-${{ matrix.opencode }}
+    if: ${{ inputs.phase == 'finalize-release' }}
+    needs: verify-and-publish
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        opencode: ["1.18.4", "1.18.5"]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Install the registry candidate and verify provider discovery
+        env:
+          ADROUTER_SMOKE_OPENCODE_VERSION: ${{ matrix.opencode }}
+          ADROUTER_SMOKE_REGISTRY: "true"
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/adrouter-empty-npmrc
+        run: bun run plugin:check
+
+  finalize-npm:
+    if: ${{ inputs.phase == 'finalize-release' }}
+    needs:
+      - verify-and-publish
+      - registry-install
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Pin npm used for dist-tag promotion
+        run: npm install --global npm@11.12.1
+      - name: Download the recorded artifact manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ inputs.tag }}" --pattern "npm-artifacts.json" --dir .
+      - name: Promote beta and latest, remove candidate, and deprecate beta.2
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: bun scripts/npm-release.ts promote npm-artifacts.json
+
+  publish-github:
+    if: ${{ inputs.phase == 'finalize-release' }}
+    needs: finalize-npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Refuse publication outside the canonical repository
+        env:
+          ACTUAL_REPOSITORY: ${{ github.repository }}
+        run: test "${ACTUAL_REPOSITORY}" = "adrouter/adrouter-opencode"
+      - name: Publish beta.3 and mark beta.2 superseded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "${{ inputs.tag }}" --repo adrouter/adrouter-opencode --draft=false --prerelease
+          gh release edit v0.1.0-beta.2 --repo adrouter/adrouter-opencode \
+            --title "WITHDRAWN — v0.1.0-beta.2" \
+            --notes "Superseded by v0.1.0-beta.3. Install @adrouter/opencode@beta."

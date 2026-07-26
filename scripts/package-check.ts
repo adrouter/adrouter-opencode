@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import manifest from "../package.json" with { type: "json" };
+import releaseManifest from "../release-manifest.json" with { type: "json" };
 
 function assert(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
@@ -16,10 +17,20 @@ async function run(command: string[], cwd: string): Promise<string> {
 }
 
 assert(manifest.name === "@adrouter/opencode", "Unexpected package name.");
-assert(manifest.version === "0.1.0-beta.2", "Unexpected package version.");
+assert(manifest.version === releaseManifest.version, "Package and release versions differ.");
+assert(releaseManifest.schema === 1, "Unsupported release manifest schema.");
+assert(releaseManifest.npm.package === manifest.name, "Release package name differs.");
+assert(
+  releaseManifest.release.finalTags.beta === manifest.version &&
+    releaseManifest.release.finalTags.latest === manifest.version,
+  "Beta and latest must both target this prerelease until the first stable release.",
+);
 assert(manifest.main === "./dist/index.js", "Legacy main must point to the root provider.");
 assert(manifest.packageManager === "bun@1.3.14", "Bun must be pinned.");
-assert(manifest.publishConfig.tag === "beta", "Publication must use the beta tag.");
+assert(
+  manifest.publishConfig.tag === releaseManifest.release.candidateTag,
+  "Publication must use the candidate tag.",
+);
 assert(manifest.publishConfig.access === "public", "Scoped package must be public.");
 assert(manifest.files.includes("src"), "Published source maps require src/.");
 
@@ -30,6 +41,16 @@ try {
   assert(tarballName, "Package tarball was not created.");
   const tarball = join(directory, tarballName);
 
+  const releaseTag = `v${releaseManifest.version}`;
+  await run(
+    ["bun", "scripts/npm-release.ts", "create", directory, releaseTag],
+    `${import.meta.dir}/..`,
+  );
+  await run(
+    ["bun", "scripts/npm-release.ts", "verify", directory, releaseTag],
+    `${import.meta.dir}/..`,
+  );
+
   const listing = await run(["tar", "-tzf", tarball], directory);
   for (const forbidden of ["package/test/", ".env", "package-lock.json", "node_modules/", ".tgz"]) {
     assert(!listing.includes(forbidden), `Packed artifact contains forbidden path: ${forbidden}`);
@@ -38,6 +59,7 @@ try {
     "package/dist/index.js",
     "package/src/index.ts",
     "package/LICENSE",
+    "package/release-manifest.json",
     "package/SECURITY.md",
     "package/RELEASE.md",
   ]) {

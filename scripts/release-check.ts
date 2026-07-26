@@ -5,6 +5,7 @@ const commands = [
   ["bun", "run", "build"],
   ["bun", "run", "audit"],
   ["bun", "run", "package:check"],
+  ["bun", "run", "plugin:check"],
 ];
 
 for (const command of commands) {
