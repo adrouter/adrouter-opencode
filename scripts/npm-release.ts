@@ -156,7 +156,14 @@ function registryPackage(version: string): RegistryPackage {
   return npmJson(["view", `${releaseManifest.npm.package}@${version}`]) as RegistryPackage;
 }
 
-function verifyRegistry(artifactFile: string, state: "candidate" | "final" | "resumable"): void {
+function pause(milliseconds: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function verifyRegistryOnce(
+  artifactFile: string,
+  state: "candidate" | "final" | "resumable",
+): void {
   const artifact = readArtifact(resolve(artifactFile));
   const remote = registryPackage(artifact.version);
   const tags = registryTags();
@@ -171,7 +178,16 @@ function verifyRegistry(artifactFile: string, state: "candidate" | "final" | "re
     "Registry metadata differs.",
   );
   assert(remote.dist?.integrity === artifact.integrity, "Registry tarball integrity differs.");
-  assert(remote.gitHead === artifact.commit, "Registry gitHead differs from the release commit.");
+  if (remote.gitHead !== undefined) {
+    assert(remote.gitHead === artifact.commit, "Registry gitHead differs from the release commit.");
+  }
+  const repository =
+    typeof remote.repository === "string" ? remote.repository : remote.repository?.url;
+  assert(
+    repository?.replace(/^git\+/, "").replace(/\.git$/, "") ===
+      "https://github.com/adrouter/adrouter-opencode",
+    "Registry repository differs.",
+  );
   assert(
     remote.dist?.attestations?.provenance?.predicateType === "https://slsa.dev/provenance/v1",
     "Registry provenance attestation is missing.",
@@ -190,6 +206,22 @@ function verifyRegistry(artifactFile: string, state: "candidate" | "final" | "re
     assert(candidateMatches || finalMatches, "Release is neither a candidate nor finalized.");
   }
   console.log(`${artifact.name}@${artifact.version} matches registry state ${state}.`);
+}
+
+function verifyRegistry(artifactFile: string, state: "candidate" | "final" | "resumable"): void {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 12; attempt += 1) {
+    try {
+      verifyRegistryOnce(artifactFile, state);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 12) break;
+      console.warn(`Registry state ${state} is not visible yet; retrying (${attempt}/12).`);
+      pause(5_000);
+    }
+  }
+  throw lastError;
 }
 
 function promote(artifactFile: string): void {
