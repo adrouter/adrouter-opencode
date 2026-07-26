@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Removed the one-time npm bootstrap workflow after trusted publishing setup.
+- Made release checksum files portable after download and replaced the
+  deprecated release action with the GitHub CLI.
+
 ## 0.1.0-beta.2
 
 - Omit local-only execution overrides from hosted AdRouter requests.

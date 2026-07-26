@@ -31,24 +31,31 @@ by source control.
    runs authenticated staging canaries for both models, and creates a draft
    GitHub prerelease with a tarball and SHA-256 checksum.
 
-## First npm publication
+## npm publication
 
-Use `bootstrap-publish.yml` once with a granular `NPM_TOKEN` scoped only to
-`@adrouter/opencode`. It publishes with:
+Use the trusted-publishing workflow `.github/workflows/publish.yml` with the
+immutable release tag. It publishes with:
 
 ```sh
 npm publish --tag beta --access public --provenance
 ```
 
-Then configure npm trusted publishing for `.github/workflows/publish.yml`,
-revoke and delete the bootstrap token, and use the OIDC workflow for subsequent
-versions. The trusted workflow has `id-token: write`.
+The npm trusted publisher is restricted to organization `adrouter`, repository
+`adrouter-opencode`, workflow `publish.yml`, and environment `npm-publish`.
+The workflow has `id-token: write` and stores no npm credential.
+
+The initial `0.1.0-beta.2` publication used a short-lived bootstrap token. The
+GitHub environment secret was deleted after publication; do not restore the
+bootstrap workflow or store a replacement npm token.
 
 ## Registry and rollout verification
 
 Before publishing the GitHub prerelease:
 
-- verify `npm view @adrouter/opencode dist-tags --json` reports only `beta`;
+- verify `npm view @adrouter/opencode dist-tags --json` reports `beta` at the
+  intended version. npm automatically assigned `latest` on the first
+  publication and returned HTTP 400 when its authenticated CLI attempted to
+  remove that tag; the prerelease version remains explicit in SemVer;
 - verify npm provenance points to the release repository, workflow, tag, and
   commit;
 - install `@adrouter/opencode@beta` in a clean OpenCode 1.18.4 profile and
@@ -61,5 +68,5 @@ errors, routing failures, settlement mismatches, latency, and spend.
 ## Rollback
 
 Revoke beta credentials or traffic, remove the `beta` dist-tag, deprecate the
-faulty immutable version, and fix forward as `0.1.0-beta.2`. Never overwrite a
+faulty immutable version, and fix forward as `0.1.0-beta.3`. Never overwrite a
 published version.
