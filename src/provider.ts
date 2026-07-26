@@ -110,7 +110,7 @@ function bodyFor(
   return {
     model: config.model || requestedModel,
     thinking_level: reasoningLevel(call),
-    ...(config.runtimeMode ? { runtime_mode: config.runtimeMode } : {}),
+    ...(!config.hosted ? { runtime_mode: config.runtimeMode } : {}),
     context: buildNativeContext(call),
     metadata: {
       client: "adrouter-opencode",

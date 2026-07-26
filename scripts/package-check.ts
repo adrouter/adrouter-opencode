@@ -16,7 +16,7 @@ async function run(command: string[], cwd: string): Promise<string> {
 }
 
 assert(manifest.name === "@adrouter/opencode", "Unexpected package name.");
-assert(manifest.version === "0.1.0-beta.1", "Unexpected package version.");
+assert(manifest.version === "0.1.0-beta.2", "Unexpected package version.");
 assert(manifest.main === "./dist/index.js", "Legacy main must point to the root provider.");
 assert(manifest.packageManager === "bun@1.3.14", "Bun must be pinned.");
 assert(manifest.publishConfig.tag === "beta", "Publication must use the beta tag.");

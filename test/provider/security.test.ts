@@ -41,6 +41,7 @@ describe("transport security", () => {
   test("forces hosted live mode and defaults workspace to its basename", () => {
     const config = resolveConfig("deepseek-v4-flash", { apiKey: "key" });
     expect(config.baseURL).toBe(DEFAULT_BASE_URL);
+    expect(config.hosted).toBe(true);
     expect(config.runtimeMode).toBe("live");
     expect(config.adMode).toBe("live");
     expect(config.workspace).toBe(basename(process.cwd()));
@@ -50,6 +51,22 @@ describe("transport security", () => {
         runtimeMode: "mock",
       }),
     ).toThrow("hosted URLs only support live");
+  });
+
+  test("omits local-only execution overrides from hosted requests", async () => {
+    let requestBody: Record<string, unknown> | undefined;
+    const provider = createAdRouter({
+      apiKey: "key",
+      fetch: (async (_input, init) => {
+        requestBody = JSON.parse(String(init?.body));
+        return Response.json({ assistant: { content: "ok" } });
+      }) as typeof fetch,
+    });
+
+    await provider.languageModel("deepseek-v4-flash").doGenerate(prompt);
+
+    expect(requestBody?.runtime_mode).toBeUndefined();
+    expect(requestBody?.tier_override).toBeUndefined();
   });
 
   test("protects authenticated headers and disables redirects", async () => {

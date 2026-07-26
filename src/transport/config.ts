@@ -7,6 +7,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 export interface ResolvedAdRouterConfig {
   apiKey: string;
   baseURL: string;
+  hosted: boolean;
   model: string;
   workspace: string;
   adMode: string;
@@ -105,6 +106,7 @@ export function resolveConfig(
   return {
     apiKey,
     baseURL: baseURLString,
+    hosted,
     model: env("ADROUTER_MODEL_ROUTE") ?? options.model ?? requestedModel,
     workspace:
       env("ADROUTER_WORKSPACE") ??

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-beta.2
+
+- Omit local-only execution overrides from hosted AdRouter requests.
+
 ## 0.1.0-beta.1
 
 - First public OpenCode beta with DeepSeek V4 Flash and Pro model registration.

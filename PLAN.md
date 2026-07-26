@@ -1,6 +1,7 @@
 # AdRouter OpenCode first-beta implementation record
 
-Target: `@adrouter/opencode@0.1.0-beta.1`.
+Target: `@adrouter/opencode@0.1.0-beta.2`. The immutable beta.1 candidate was
+rejected by its staging canary before publication.
 
 ## Implemented
 

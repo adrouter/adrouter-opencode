@@ -21,12 +21,12 @@ by source control.
 ## Candidate
 
 1. Run `bun install --frozen-lockfile` and `bun run release:check`.
-2. Confirm the development audit has no high/critical findings. For beta.1 the
+2. Confirm the development audit has no high/critical findings. For beta.2 the
    accepted development-only low finding is `GHSA-4x5r-pxfx-6jf8` through the
    pinned OpenCode/OpenTUI toolchain. The OpenTUI build chain is overridden to
    patched `brace-expansion@5.0.8` for `GHSA-mh99-v99m-4gvg`; the production
    dependency audit is clean.
-3. Create and push an immutable protected `v0.1.0-beta.1` tag from the accepted
+3. Create and push an immutable protected `v0.1.0-beta.2` tag from the accepted
    commit. `release.yml` reruns all gates, validates OpenCode 1.18.4 model IDs,
    runs authenticated staging canaries for both models, and creates a draft
    GitHub prerelease with a tarball and SHA-256 checksum.
