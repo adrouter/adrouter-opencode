@@ -49,8 +49,8 @@ beta.2 package and closes the plugin-installation/provider-discovery gap.
 The first beta completed the repository and npm ownership gates. Beta.3 still
 requires:
 
-- create the separate `adrouter-staging` environment and re-enter its staging
-  bearer token;
+- re-enter the staging bearer token in the now-created `adrouter-staging`
+  environment, then remove its misplaced copy from `npm-publish`;
 - add a new seven-day `NPM_TOKEN` to `npm-publish` for dist-tag/deprecation
   operations, then delete and revoke it after release;
 - complete npm browser/2FA step-up and verify the `publish.yml` trusted
