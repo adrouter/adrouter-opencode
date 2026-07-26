@@ -147,6 +147,16 @@ jobs:
           registry-url: https://registry.npmjs.org
       - name: Pin npm used for dist-tag promotion
         run: npm install --global npm@11.12.1
+      - name: Checkout the protected release verifier from the workflow commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          path: release-verifier-source
+          sparse-checkout: |
+            package.json
+            release-manifest.json
+            scripts/npm-release.ts
+          persist-credentials: false
       - name: Download the recorded artifact manifest
         env:
           GH_TOKEN: ${{ github.token }}
