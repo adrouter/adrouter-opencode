@@ -62,7 +62,7 @@ jobs:
       - run: bun scripts/npm-release.ts verify release-assets "${{ inputs.tag }}"
       - name: Publish the exact tarball under candidate with npm OIDC
         if: ${{ inputs.phase == 'publish-candidate' }}
-        run: npm publish release-assets/*.tgz --tag candidate --access public --ignore-scripts --provenance
+        run: npm publish ./release-assets/*.tgz --tag candidate --access public --ignore-scripts --provenance
       - name: Verify candidate publication
         if: ${{ inputs.phase == 'publish-candidate' }}
         run: bun scripts/npm-release.ts registry release-assets/npm-artifacts.json candidate
