@@ -26,8 +26,8 @@ OpenCode integration key.
 - reasoning, function-tool, usage, settlement, and sponsor metadata handling;
 - strict terminal stream ordering: model and tool events, footer ad, settlement,
   then completion;
-- one compact, explicitly labelled Tier A/B/C footer plus deduplicated session
-  savings;
+- one bounded, explicitly labelled Tier A/B/C footer showing ad copy, current-turn subsidy, and
+  deduplicated session savings in at most three terminal rows;
 - fail-closed URL, redirect, header, timeout, response-size, and protocol checks.
 
 Sponsor copy and settlement metadata are display/accounting data only. They are
@@ -49,6 +49,12 @@ Latest channel:
 
 ```sh
 opencode plugin --global @adrouter/opencode@latest
+```
+
+Candidate channel (beta.9 testing only; `beta` and `latest` remain on beta.8):
+
+```sh
+opencode plugin --global @adrouter/opencode@candidate
 ```
 
 Then confirm that OpenCode can discover the provider:
@@ -209,6 +215,10 @@ and individual NDJSON lines at 1 MiB.
 ## Footer behavior
 
 - Tier A, B, and C share one `Sponsored · TIER …` footer shape.
+- Sponsored placements use at most three rows: disclosure/tier/title, sanitized copy/CTA, then
+  current-turn subsidy plus deduplicated session savings and the URL when space permits.
+- Every row is clamped to the visible terminal width, with economics kept ahead of the URL when the
+  third row must be shortened.
 - Tier NONE remains visible for a privacy or guardrail outcome.
 - Degraded, malformed, aborted, or incomplete turns clear stale sponsorship.
 - Session savings are deduplicated by AdRouter turn ID.
@@ -244,6 +254,9 @@ prompts, private response bodies, or local paths. See [SECURITY.md](SECURITY.md)
   availability.
 - `409 live_not_enabled`: the selected upstream provider is not enabled on that
   Router environment.
+- `429 concurrency_limit`: the Router declined admission before reserving capacity or beginning
+  paid generation. OpenCode may briefly show its own bounded retry notice and then succeed; if it
+  repeats, wait for another active turn to finish rather than adding a second manual replay.
 - malformed or out-of-order NDJSON: the turn ends with a sanitized protocol
   error; prior streamed output is not silently rewritten and sponsor state is
   cleared.

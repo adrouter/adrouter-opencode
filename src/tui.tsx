@@ -3,12 +3,7 @@
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import type { Message } from "@opencode-ai/sdk/v2";
 import { createSignal } from "solid-js";
-import {
-  ADROUTER_PALETTE,
-  AdRouterPanelState,
-  formatSubsidy,
-  renderCompactAd,
-} from "./presentation.js";
+import { ADROUTER_PALETTE, AdRouterPanelState, renderAdFooterLines } from "./presentation.js";
 
 const tui: TuiPlugin = async (api) => {
   const state = new AdRouterPanelState();
@@ -73,12 +68,16 @@ const tui: TuiPlugin = async (api) => {
         const ad = snapshot.ads[0];
         const width = Math.max(0, api.renderer.width);
         const palette = ADROUTER_PALETTE[api.theme.mode()];
+        const lines = renderAdFooterLines(ad, width, {
+          currentSubsidy: snapshot.settlement?.ad_subsidy,
+          cumulativeSavings: savings,
+        });
+        if (lines.length === 0) return null;
         return (
           <box flexDirection="column">
-            <text fg={palette.label}>{renderCompactAd(ad, width)}</text>
-            {savings > 0 ? (
-              <text fg={palette.label}>{`saved $${formatSubsidy(savings)}`}</text>
-            ) : null}
+            {lines.map((line) => (
+              <text fg={palette.label}>{line}</text>
+            ))}
           </box>
         );
       },

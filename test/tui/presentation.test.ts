@@ -3,8 +3,10 @@ import {
   ADROUTER_PALETTE,
   AdRouterPanelState,
   formatSubsidy,
+  renderAdFooterLines,
   renderCompactAd,
   truncateVisible,
+  visibleWidth,
 } from "../../src/presentation.js";
 
 const tierC = {
@@ -46,6 +48,75 @@ describe("tiered presentation", () => {
         ),
       ).toBe(`Sponsored · TIER ${tier}: Acme — Ship — https://acme.test`);
     }
+  });
+
+  test("renders at most three width-bounded rows with economics ahead of the URL", () => {
+    expect(
+      renderAdFooterLines({ ...tierC, cta: "Try it" }, 120, {
+        currentSubsidy: 0.002,
+        cumulativeSavings: 0.012,
+      }),
+    ).toEqual([
+      "Sponsored · TIER C: Developer Tools",
+      "Build faster · Try it",
+      "subsidy $0.002000 · saved $0.012 · https://example.test",
+    ]);
+
+    for (const width of [0, 1, 2, 3, 4, 12, 20, 38, 80, 120]) {
+      const lines = renderAdFooterLines(
+        {
+          ...tierC,
+          title: "工具 🚀 Developer Tools",
+          body: "Build\u0000 faster with a deliberately long terminal-safe sponsor message",
+          cta: "\u001b[31mTry it\u001b[0m",
+        },
+        width,
+        { currentSubsidy: 0.002, cumulativeSavings: 0.012 },
+      );
+      expect(lines.length).toBeLessThanOrEqual(3);
+      expect(lines.every((line) => visibleWidth(line) <= width)).toBe(true);
+      expect(lines.join("\n")).not.toContain("\u0000");
+      expect(lines.join("\n")).not.toContain("\u001b");
+    }
+    expect(
+      renderAdFooterLines(tierC, 38, {
+        currentSubsidy: 0.002,
+        cumulativeSavings: 0.012,
+      })[2],
+    ).toContain("subsidy $0.002000 · saved $0.012");
+    expect(
+      renderAdFooterLines(tierC, 38, {
+        currentSubsidy: 0.002,
+        cumulativeSavings: 0.012,
+      })[2],
+    ).not.toContain("https://");
+  });
+
+  test("uses safe fallbacks, pending economics, and a single compact NONE row", () => {
+    expect(
+      renderAdFooterLines({ id: "missing", tier: "C", title: "", body: "", label: "" }, 120, {
+        currentSubsidy: Number.NaN,
+        cumulativeSavings: -1,
+      }),
+    ).toEqual(["Sponsored · TIER C: Sponsored placement", "subsidy pending · saved $0.000000"]);
+    expect(
+      renderAdFooterLines(
+        {
+          id: "none",
+          tier: "NONE",
+          title: "ignored",
+          body: "Privacy guardrail",
+          label: "TIER NONE",
+        },
+        120,
+        { currentSubsidy: 99, cumulativeSavings: 99 },
+      ),
+    ).toEqual(["TIER NONE: No sponsored content — Privacy guardrail"]);
+    expect(renderAdFooterLines(tierC, 0, { cumulativeSavings: 0 })).toEqual([]);
+    expect(renderAdFooterLines(tierC, Number.NaN, { cumulativeSavings: 0 })).toEqual([]);
+    expect(renderAdFooterLines(tierC, Number.POSITIVE_INFINITY, { cumulativeSavings: 0 })).toEqual(
+      [],
+    );
   });
 
   test("renders NONE and keeps the compact palette and savings formatter", () => {
@@ -103,6 +174,21 @@ describe("tiered presentation", () => {
     ]);
     expect(state.cumulativeSavings()).toBe(0.002);
     expect(state.snapshot()?.ads[0]?.title).not.toBe("Stale");
+
+    const secondTurn = {
+      adrouter: {
+        ...settled.adrouter,
+        turnId: "turn-2",
+        sequence: 3,
+        settlement: { ad_subsidy: 0.004 },
+      },
+    };
+    state.reconstruct("s1", [
+      { id: "u1", role: "user", parts: [] },
+      { id: "a1", role: "assistant", parts: [{ metadata: settled }, { metadata: settled }] },
+      { id: "a2", role: "assistant", parts: [{ metadata: secondTurn }] },
+    ]);
+    expect(state.cumulativeSavings()).toBe(0.006);
 
     state.reconstruct("s1", [
       {

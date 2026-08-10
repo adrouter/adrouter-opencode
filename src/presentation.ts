@@ -59,6 +59,47 @@ export function renderCompactAd(ad: AdRouterAd, width: number): string {
   return truncateVisible(`${disclosure} · TIER ${ad.tier}: ${content}`, width);
 }
 
+export interface AdFooterEconomics {
+  currentSubsidy?: number | undefined;
+  cumulativeSavings: number;
+}
+
+function displayAmount(value: number | undefined): string | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? formatSubsidy(value)
+    : undefined;
+}
+
+export function renderAdFooterLines(
+  ad: AdRouterAd,
+  width: number,
+  economics: AdFooterEconomics,
+): string[] {
+  const maximumWidth = Number.isFinite(width) ? Math.max(0, Math.floor(width)) : 0;
+  if (maximumWidth === 0) return [];
+  if (ad.tier === "NONE") return [renderCompactAd(ad, maximumWidth)];
+
+  const disclosure = sanitizeText(ad.label, "Sponsored") || "Sponsored";
+  const title = sanitizeText(ad.title, "Sponsored placement") || "Sponsored placement";
+  const body = [sanitizeText(ad.body), sanitizeText(ad.cta)].filter(Boolean).join(" · ");
+  const subsidy = displayAmount(economics.currentSubsidy);
+  const savings = displayAmount(economics.cumulativeSavings) ?? formatSubsidy(0);
+  const url = sanitizeText(ad.url);
+  const economicsLine = [
+    subsidy ? `subsidy $${subsidy}` : "subsidy pending",
+    `saved $${savings}`,
+    url,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return [
+    truncateVisible(`${disclosure} · TIER ${ad.tier}: ${title}`, maximumWidth),
+    body ? truncateVisible(body, maximumWidth) : "",
+    truncateVisible(economicsLine, maximumWidth),
+  ].filter(Boolean);
+}
+
 export function formatSubsidy(amount: number): string {
   return amount < 0.01 ? amount.toFixed(6) : amount.toFixed(3);
 }

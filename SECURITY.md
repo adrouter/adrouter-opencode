@@ -2,9 +2,9 @@
 
 ## Supported versions
 
-Security fixes are provided for the newest published stable and actively supported beta channels.
-Before the first stable release, the newest beta is the only supported version. Published npm
-versions are immutable; fixes use a new version rather than replacing an artifact.
+Security fixes are provided for the newest published candidate and actively supported public
+channels. During beta.9 acceptance, beta.9 `candidate` and beta.8 `beta`/`latest` are supported.
+Published npm versions are immutable; fixes use a new version rather than replacing an artifact.
 
 ## Reporting
 

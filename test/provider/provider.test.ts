@@ -159,6 +159,42 @@ describe("AdRouter LanguageModelV3", () => {
     );
   });
 
+  test("reports a bounded concurrency admission response once without plugin replay", async () => {
+    let fetchCalls = 0;
+    const model = createAdRouter({
+      apiKey: "key",
+      baseURL: "http://localhost:8787",
+      fetch: (async () => {
+        fetchCalls += 1;
+        return Response.json(
+          {
+            error: `Concurrency limit reached.\u001b[31m${"x".repeat(2_000)}\u001b[0m`,
+            code: "concurrency_limit",
+          },
+          { status: 429 },
+        );
+      }) as unknown as typeof fetch,
+    }).languageModel("deepseek-v4-flash");
+
+    let caught: unknown;
+    try {
+      await model.doGenerate({
+        prompt: [{ role: "user", content: [{ type: "text", text: "hello" }] }],
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(fetchCalls).toBe(1);
+    expect(caught).toBeInstanceOf(Error);
+    const message = (caught as Error).message;
+    expect(message).toStartWith(
+      "AdRouter request failed (429, concurrency_limit): Concurrency limit reached.",
+    );
+    expect(message.length).toBeLessThanOrEqual(570);
+    expect(message).not.toContain("\u001b");
+  });
+
   test("maps split NDJSON, authoritative suffixes, tools, usage, and metadata", async () => {
     let requestBody: Record<string, any> | undefined;
     const fetchMock = (async (_input, init) => {

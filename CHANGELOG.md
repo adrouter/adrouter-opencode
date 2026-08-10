@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-beta.9
+
+- Expanded the disclosed footer to at most three terminal-width-bounded rows for placement title,
+  sanitized copy/CTA, and current-turn subsidy plus deduplicated session savings and URL.
+- Prioritized subsidy and savings ahead of the URL at narrow widths while retaining compact NONE,
+  off, degraded, and stale-state behavior.
+- Documented `429 concurrency_limit` as a truthful transient pre-generation admission response and
+  added regression coverage proving the plugin reports it once without internal replay.
+
 ## 0.1.0-beta.8
 
 - Accepted long OpenCode system prompts under the Router's global request budget and surfaced

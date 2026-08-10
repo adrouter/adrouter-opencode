@@ -1,6 +1,6 @@
 {
   "name": "@adrouter/opencode",
-  "version": "0.1.0-beta.8",
+  "version": "0.1.0-beta.9",
   "description": "AdRouter provider and disclosed sponsorship footer for OpenCode",
   "license": "MIT",
   "type": "module",

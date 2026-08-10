@@ -135,20 +135,22 @@ deprecates `supersedes`, and publishes GitHub with the manifest's prerelease sta
 The workflow is resumable only when tag, commit, artifact, integrity, and registry metadata are
 exact. Fix workflow defects through protected `main`; never retag or rebuild.
 
-## Beta.7 soak and stable 0.1.0
+## Beta.9 candidate, later finalization, and stable 0.1.0
 
 Beta.6 was rejected before channel promotion because its unversioned provider registration resolved
 public beta.4 at execution time. Keep beta.6 immutable and deprecated; never promote or rebuild it.
 
-For `0.1.0-beta.8`, finalization must leave both `beta` and `latest` on beta.8, remove `candidate`,
-deprecate beta.4, and publish a GitHub prerelease.
+Beta.8 is the accepted public beta. Publishing `0.1.0-beta.9` as a candidate must leave both
+`beta` and `latest` on beta.8 and keep the beta.9 GitHub release as a draft. Only a later,
+separately authorized finalization may move both public tags to beta.9, remove `candidate`,
+deprecate superseded beta.8 according to the manifest, and publish the GitHub prerelease.
 
-Start the stable clock at successful beta.8 finalization. For at least 48 hours:
+Start or restart the stable clock only at successful beta.9 finalization. For at least 48 hours:
 
 - retain successful anonymous packaged-user workflow evidence for macOS, Linux, and Windows;
 - keep both authenticated model canaries green;
-- verify an installed interactive session renders settled Tier A exactly like Tier B/C and never
-  renders an expanded card;
+- verify an installed interactive session renders settled Tier A exactly like Tier B/C, uses at
+  most three bounded rows, and shows current subsidy plus deduplicated savings;
 - treat any install, privacy, routing, settlement, or display regression as release-blocking.
 
 At or after the 48-hour point, dispatch the non-mutating published-channel verifier and approve its
@@ -156,7 +158,7 @@ At or after the 48-hour point, dispatch the non-mutating published-channel verif
 
 ```sh
 gh workflow run soak.yml --repo adrouter/adrouter-opencode --ref main \
-  -f version=0.1.0-beta.8 -f channel=beta
+  -f version=0.1.0-beta.9 -f channel=beta
 ```
 
 Record its successful run URL for the `darwin`, `linux`, and `windows` cohort evidence fields. The
@@ -165,9 +167,9 @@ OpenCode version plus both authenticated canaries.
 
 After a clean soak, the stable PR may modify only `package.json`, `release-manifest.json`,
 `CHANGELOG.md`, `README.md`, `SECURITY.md`, `RELEASE.md`, and `PLAN.md`. Set `version=0.1.0`,
-`latest=0.1.0`, `beta=0.1.0-beta.8`, remove `supersedes`, set `githubPrerelease=false`, and record
+`latest=0.1.0`, `beta=0.1.0-beta.9`, remove `supersedes`, set `githubPrerelease=false`, and record
 the authenticated soak evidence. Source, tests, scripts, workflows, and dependencies must remain
-identical to beta.8. Publish stable through the same candidate and finalization phases.
+identical to beta.9. Publish stable through the same candidate and finalization phases.
 
 ## Independent verification and cleanup
 
@@ -208,7 +210,9 @@ Keep the staging key only while canaries remain useful; rotate or revoke it afte
 - Before final promotion, leave `beta`/`latest` unchanged, remove or replace only `candidate`,
   deprecate the rejected immutable version, and fix forward.
 - Beta.6 is rejected; never overwrite it.
-- If beta.8 is unusable, release beta.9; never overwrite beta.8.
-- If stable 0.1.0 is invalid, move `latest` back to beta.8, deprecate 0.1.0, and fix forward through
+- If beta.9 fails candidate acceptance, leave beta.8 on `beta`/`latest` and release beta.10; never
+  overwrite beta.9.
+- If stable 0.1.0 is invalid after beta.9 finalization, move `latest` back to beta.9, deprecate
+  0.1.0, and fix forward through
   `0.1.1-beta.1` followed by `0.1.1`.
 - Never overwrite, reuse, move, or unpublish an immutable version or Git tag.
