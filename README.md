@@ -1,9 +1,19 @@
-# @adrouter/opencode
+<h1 align="center">AdRouter for OpenCode</h1>
 
-AdRouter provider and disclosed sponsorship footer for OpenCode `>=1.18.4 <2`.
-The plugin sends text-and-tool turns to the isolated AdRouter integration API,
-keeps sponsor data out of model context, and renders the returned placement in
-OpenCode's `app_bottom` slot after the model turn.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@adrouter/opencode"><img src="https://img.shields.io/npm/v/%40adrouter%2Fopencode/beta?label=npm%20beta" alt="npm beta version"></a>
+  <a href="https://github.com/adrouter/adrouter-opencode/actions/workflows/ci.yml"><img src="https://github.com/adrouter/adrouter-opencode/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/adrouter/adrouter-opencode/releases"><img src="https://img.shields.io/github/v/release/adrouter/adrouter-opencode?include_prereleases&amp;label=release" alt="GitHub release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
+</p>
+
+<p align="center">
+  An AdRouter provider and disclosed sponsorship footer for OpenCode.
+</p>
+
+`@adrouter/opencode` supports OpenCode `>=1.18.4 <2`. It sends text-and-tool turns to the
+isolated AdRouter integration API, keeps sponsor data out of model context, and renders the returned
+placement in OpenCode's `app_bottom` slot after the model turn.
 
 Hosted integration access is separately gated. Having an AdRouterCLI or
 AdRouterAgent login does not grant this API, and those clients cannot use an
@@ -24,14 +34,27 @@ Sponsor copy and settlement metadata are display/accounting data only. They are
 never inserted into system prompts, user or assistant messages, tool
 definitions or results, generated commands, patches, or compacted context.
 
-## Availability and install
+## Install
 
-The repository and package are intended to be public, but hosted account access
-can remain invite-only or disabled per developer. Install an accepted package
-channel only after its release notes identify the integration endpoint:
+The package is public, while hosted integration access may remain invite-only or disabled per
+developer. Choose the release channel you want to follow.
+
+Beta channel:
 
 ```sh
 opencode plugin --global @adrouter/opencode@beta
+```
+
+Latest channel:
+
+```sh
+opencode plugin --global @adrouter/opencode@latest
+```
+
+Then confirm that OpenCode can discover the provider:
+
+```sh
+opencode models adrouter
 ```
 
 OpenCode activates both exported targets:
@@ -225,7 +248,15 @@ prompts, private response bodies, or local paths. See [SECURITY.md](SECURITY.md)
   error; prior streamed output is not silently rewritten and sponsor state is
   cleared.
 
-## Development
+## Documentation
+
+- [Security policy](SECURITY.md)
+- [Support](SUPPORT.md)
+- [Changelog](CHANGELOG.md)
+- [Release procedure](RELEASE.md)
+- [GitHub releases](https://github.com/adrouter/adrouter-opencode/releases)
+
+## Development and contributing
 
 Use Bun 1.3.14 and keep `bun.lock` authoritative:
 
@@ -240,3 +271,7 @@ The full `bun run release:check` additionally runs formatting, coverage,
 auditing, package inspection, isolated imports, and OpenCode registry checks.
 It is a release-readiness command, not a publication command. See
 [CONTRIBUTING.md](CONTRIBUTING.md) and [RELEASE.md](RELEASE.md).
+
+## License
+
+AdRouter for OpenCode is released under the [MIT License](LICENSE).
