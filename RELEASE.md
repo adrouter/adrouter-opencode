@@ -67,6 +67,9 @@ npm trust github @adrouter/opencode \
   finalization time, and macOS/Linux/Windows GitHub Actions evidence URLs.
 - `candidate` is temporary and must be absent after finalization.
 
+The beta.9 operator exception below temporarily relaxes only that final cleanup invariant. It does
+not permit candidate to point anywhere other than the exact package on both public channels.
+
 `bun run release:policy` rejects channel mismatches. Stable additionally requires the beta tag,
 at least 48 elapsed hours, all three evidence URLs, and a diff limited to release metadata and
 documentation. Any runtime change requires a new unused beta and a restarted soak.
@@ -135,17 +138,20 @@ deprecates `supersedes`, and publishes GitHub with the manifest's prerelease sta
 The workflow is resumable only when tag, commit, artifact, integrity, and registry metadata are
 exact. Fix workflow defects through protected `main`; never retag or rebuild.
 
-## Beta.9 candidate, later finalization, and stable 0.1.0
+## Beta.9 public release, cleanup, and stable 0.1.0
 
 Beta.6 was rejected before channel promotion because its unversioned provider registration resolved
 public beta.4 at execution time. Keep beta.6 immutable and deprecated; never promote or rebuild it.
 
-Beta.8 is the accepted public beta. Publishing `0.1.0-beta.9` as a candidate must leave both
-`beta` and `latest` on beta.8 and keep the beta.9 GitHub release as a draft. Only a later,
-separately authorized finalization may move both public tags to beta.9, remove `candidate`,
-deprecate superseded beta.8 according to the manifest, and publish the GitHub prerelease.
+Beta.9 is the accepted public beta on both `beta` and `latest`. Its finalization passed the complete
+release-integrity and macOS/Linux/Windows OpenCode registry matrix. npm accepted both public tag
+writes but returned `403` for deletion of `candidate`, so the operator-authorized recovery published
+the unchanged GitHub prerelease while retaining `candidate` on the same immutable beta.9 package and
+skipping beta.8 deprecation. Candidate cleanup remains required before the stable soak verifier; it
+must not rebuild, retag, or replace beta.9.
 
-Start or restart the stable clock only at successful beta.9 finalization. For at least 48 hours:
+Start or restart the stable clock only after the retained beta.9 candidate alias is removed. For at
+least 48 hours after cleanup:
 
 - retain successful anonymous packaged-user workflow evidence for macOS, Linux, and Windows;
 - keep both authenticated model canaries green;
@@ -210,8 +216,8 @@ Keep the staging key only while canaries remain useful; rotate or revoke it afte
 - Before final promotion, leave `beta`/`latest` unchanged, remove or replace only `candidate`,
   deprecate the rejected immutable version, and fix forward.
 - Beta.6 is rejected; never overwrite it.
-- If beta.9 fails candidate acceptance, leave beta.8 on `beta`/`latest` and release beta.10; never
-  overwrite beta.9.
+- If beta.9 develops a defect, preserve its immutable artifacts and fix forward through beta.10;
+  never overwrite beta.9.
 - If stable 0.1.0 is invalid after beta.9 finalization, move `latest` back to beta.9, deprecate
   0.1.0, and fix forward through
   `0.1.1-beta.1` followed by `0.1.1`.

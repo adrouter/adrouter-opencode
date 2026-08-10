@@ -1,9 +1,9 @@
-# Plan: OpenCode Beta.9 Footer Candidate
+# Plan: OpenCode Beta.9 Footer Release
 
 ## Goal
 
-Publish `@adrouter/opencode@0.1.0-beta.9` under npm `candidate` with a bounded three-row footer that
-shows current subsidy and cumulative savings, while leaving accepted `beta`/`latest` on beta.8.
+Publish `@adrouter/opencode@0.1.0-beta.9` with a bounded three-row footer that shows current subsidy
+and cumulative savings, then promote the tested immutable package to npm `beta` and `latest`.
 
 ## Context
 
@@ -29,7 +29,8 @@ shows current subsidy and cumulative savings, while leaving accepted `beta`/`lat
   stream ordering, settlement accounting, and sponsor isolation.
 - Keep every footer row within visible terminal width and render no more than three rows.
 - Add no dependencies and use Bun 1.3.14 with the existing lockfile.
-- Publish only npm `candidate`; do not move `beta`/`latest` or finalize the GitHub draft.
+- Keep the promoted beta.9 package immutable; retain the `candidate` alias only as the documented
+  cleanup exception and do not advance any channel to a different version.
 
 ## Out of Scope
 
@@ -149,7 +150,7 @@ git diff --check
 
 - [x] Package and manifest identify beta.9 and exact candidate/finalization intent.
 - [x] README keeps `@beta`/`@latest` and adds a clearly marked `@candidate` command.
-- [x] Release documentation leaves beta.8 public until separate finalization.
+- [x] Release documentation records beta.9 promotion and the retained-candidate cleanup exception.
 
 ### Validation Results
 
@@ -165,7 +166,7 @@ git diff --check
 
 ### Status
 
-`in_progress`
+`complete`
 
 ### Objective
 
@@ -174,9 +175,11 @@ Validate, merge, stage, publish, and independently verify the exact beta.9 candi
 ### Tasks
 
 - [x] Run the full release gate and review the complete clean diff.
-- [ ] Merge through protected linear `main`, tag the exact squash commit, and approve staging.
-- [ ] Verify the three immutable draft assets, publish npm `candidate`, and pass every registry job.
-- [ ] Re-query anonymous npm/GitHub state and record evidence without finalizing.
+- [x] Merge through protected linear `main`, tag the exact squash commit, and approve staging.
+- [x] Verify the three immutable draft assets, publish npm `candidate`, and pass every registry job.
+- [x] Promote the exact package to npm `beta`/`latest` and publish the GitHub prerelease after live
+      Windows acceptance and explicit operator authorization.
+- [x] Re-query anonymous npm/GitHub state and record the candidate-cleanup exception.
 
 ### Relevant Files
 
@@ -201,26 +204,32 @@ git status --short --branch
 
 ### Acceptance Criteria
 
-- [ ] Local release gate and all protected CI/staging/registry jobs pass.
-- [ ] npm `candidate` resolves to beta.9 with exact staged tarball integrity.
-- [ ] npm `beta`/`latest` remain beta.8 and GitHub beta.9 remains draft.
-- [ ] Temporary release clones/output are cleaned after evidence is recorded.
+- [x] Local release gate and all protected CI/staging/registry jobs pass.
+- [x] npm `beta`, `latest`, and retained `candidate` resolve to beta.9 with exact staged integrity.
+- [x] GitHub beta.9 is a public prerelease retaining the original three assets.
+- [x] No package version, Git tag, or release asset was replaced.
 
 ### Validation Results
 
-- Not run.
+- Candidate workflow `31374665139`: passed the complete macOS/Linux/Windows registry matrix.
+- Finalization workflow `31383566436`: passed release integrity and all six OpenCode/OS registry
+  jobs; npm moved `beta` and `latest` to beta.9 before returning `403` for candidate deletion.
+- The verified draft was then published unchanged as the beta.9 GitHub prerelease under the
+  explicit operator override.
 
 ### Findings / Notes
 
-- Candidate publication uses configured OIDC and existing protected environments; no new auth setup
-  is expected.
+- npm denied only the DELETE request for `candidate`; the alias remains on the same immutable beta.9
+  package and does not change `beta`/`latest` behavior. Beta.8 deprecation was skipped.
 
 ---
 
 ## Follow-up Work
 
-- Perform interactive candidate acceptance before any later beta/latest finalization.
-- Restart the stable soak clock from beta.9 only after separate finalization authorization.
+- Remove the retained `candidate` alias and apply beta.8 deprecation only after npm cleanup
+  authorization is available; neither is required for beta/latest installation.
+- Start the stable soak clock only after candidate cleanup so the published-channel verifier retains
+  its normal invariant.
 
 ## Decision Log
 
@@ -229,3 +238,4 @@ git status --short --branch
 | 2026-08-08 | Reject beta.6 and fix provider version binding in beta.7/beta.8. | Unversioned provider resolution crossed into an older machine-auth package. | Later candidates retain exact package/provider identity. |
 | 2026-08-10 | Treat the observed 429 as a truthful transient admission response. | Router rejects it before reservation/generation and OpenCode already retries successfully. | Add coverage/docs; do not suppress or replay in the plugin. |
 | 2026-08-10 | Publish footer changes as beta.9 candidate only. | Beta.8 is accepted and immutable, while candidate testing must not disturb public channels. | Create a new npm candidate and draft GitHub release; defer finalization. |
+| 2026-08-10 | Promote beta.9 after live Windows acceptance and retain its candidate alias. | npm accepted `beta`/`latest` but denied only candidate deletion; the alias points to the identical immutable package. | Publish the verified GitHub prerelease unchanged, skip beta.8 deprecation, and defer cleanup until suitable npm authorization exists. |
