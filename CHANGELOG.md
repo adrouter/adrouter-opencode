@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-beta.11
+
+- Deliver transport cancellation promptly even when underlying stream cleanup never settles; preserve existing deadlines and protocol validation.
+- Add deterministic coverage for cancellation cleanup. The historical Desktop stall remains unverified, and output defaults are unchanged.
+
 ## 0.1.0-beta.10
 
 - Prevented project configuration from replacing the exact AdRouter provider package, protected
