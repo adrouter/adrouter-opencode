@@ -324,3 +324,50 @@ git status --short --branch
 | 2026-08-10 | Publish footer changes as beta.9 candidate only. | Beta.8 is accepted and immutable, while candidate testing must not disturb public channels. | Create a new npm candidate and draft GitHub release; defer finalization. |
 | 2026-08-10 | Promote beta.9 after live Windows acceptance and retain its candidate alias. | npm accepted `beta`/`latest` but denied only candidate deletion; the alias points to the identical immutable package. | Publish the verified GitHub prerelease unchanged, skip beta.8 deprecation, and defer cleanup until suitable npm authorization exists. |
 | 2026-08-11 | Extract a security-only beta.10 candidate from current remote main. | The aggregate local tree also contained unrelated footer/presentation work. | Preserve all original bytes locally while publishing only the validated provider/transport fixes. |
+
+
+# Streaming-reliability candidate 0.1.0-beta.11 — 10 September 2026
+
+## Goal
+Publish the demonstrated local stream-handling corrections as 0.1.0-beta.11 on npm candidate through adrouter/adrouter-opencode. Preserve beta/latest and all previous immutable versions.
+
+## Context and constraints
+This isolated checkout starts from original-repository main. Original dirty checkout, unrelated governance/GitLab changes and parked work remain untouched. Only streaming fixes/tests and release metadata are included. No new dependencies, API/IPC/state changes, account-policy changes, limit increases or Router deployment. Historical Desktop incident remains unverified (0/3 hosted reproduction attempts, $0).
+
+## Step A: Prepare and validate
+### Status
+`in_progress`
+- [x] Verify version/tag unused and copy reviewed fixes.
+- [x] Update current release metadata while preserving historical evidence.
+- [ ] Run full platform release gates and review diff.
+### Validation Results
+Pending for this exact release version; previous source regression evidence is recorded in workspace docs/streaming-and-model-limits-2026-09-10.md.
+
+## Step B: Review, stage and publish candidate
+### Status
+`todo`
+- [ ] Commit clean inputs; open PR against original main; require CI and normal protected review/merge.
+- [ ] Verify authentication and exact-tag protected rules; stage and verify immutable artifacts from merged SHA.
+- [ ] Publish only candidate with matching workflow ref/tag; verify required registry smoke checks.
+### Validation Results
+Not run.
+
+## Step C: Final verification and cleanup
+### Status
+`todo`
+- [ ] Independently compare npm integrity and staged artifacts; record SHA, tag, checksums and workflow URLs.
+- [ ] Verify beta/latest unchanged and preserve unrelated work.
+### Validation Results
+Not run.
+
+## Follow-up Work
+After all three client candidates verify, append the workspace roadmap TODO to double 4096 output defaults to 8192; no limit changes in this release. Physical acceptance and final beta/latest promotion require separate authorization.
+
+## Decision Log
+| Date | Decision | Rationale |
+| --- | --- | --- |
+| 2026-09-10 | New immutable 0.1.0-beta.11 on existing candidate channel | Approved release plan; published versions cannot be modified |
+| 2026-09-10 | Original adrouter repository; adrouter-co backup only | Existing protected workflows and user-selected release destination |
+
+### Beta.11 local gate results
+Bun 1.3.14 frozen install and full release:check passed: lint, typecheck, release policy, 43 tests with coverage, build, audit, package inspection, and OpenCode 1.18.4/1.18.15 installation/provider-auth discovery. Original working tree and stash remain untouched. Hosted staging canaries and registry candidate matrix are pending; no live requests have been sent.

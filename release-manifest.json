@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "version": "0.1.0-beta.10",
+  "version": "0.1.0-beta.11",
   "release": {
     "candidateTag": "candidate",
     "finalTags": {
-      "beta": "0.1.0-beta.10",
-      "latest": "0.1.0-beta.10"
+      "beta": "0.1.0-beta.11",
+      "latest": "0.1.0-beta.11"
     },
     "githubPrerelease": true,
     "supersedes": "0.1.0-beta.9"
