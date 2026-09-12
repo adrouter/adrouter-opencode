@@ -3,7 +3,7 @@
 ## Supported versions
 
 Security fixes are provided for the actively supported public channels. Beta.9 is supported through
-`beta`, `latest`, and the temporarily retained `candidate` alias; beta.8 is superseded.
+`beta` and `latest`; candidate is a separate acceptance channel. Beta.11 is prepared but not yet published; beta.8 is superseded.
 Published npm versions are immutable; fixes use a new version rather than replacing an artifact.
 
 ## Reporting

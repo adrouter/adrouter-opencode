@@ -51,7 +51,7 @@ Latest channel:
 opencode plugin --global @adrouter/opencode@latest
 ```
 
-Security candidate under acceptance testing (beta.10):
+Candidate channel for acceptance testing (beta.12 prepared; publication pending):
 
 ```sh
 opencode plugin --global @adrouter/opencode@candidate
