@@ -1,6 +1,6 @@
 # Release runbook
 
-> Prepared candidate: streaming reliability `0.1.0-beta.11`. Public `beta` and `latest` remain on
+> Current candidate: security fix-forward `0.1.0-beta.12`. Public `beta` and `latest` remain on
 > immutable beta.9 until separate candidate acceptance and finalization.
 
 ## Hard prerequisites

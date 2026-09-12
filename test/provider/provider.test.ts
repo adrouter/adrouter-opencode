@@ -69,6 +69,42 @@ async function parts(
 }
 
 describe("AdRouter LanguageModelV3", () => {
+  test.each([
+    [undefined, undefined, 16_384],
+    [4096, undefined, 4096],
+    [32_768, undefined, 16_384],
+    [4096, 2048, 2048],
+    [4096, 9000, 9000],
+    [undefined, 32_768, 16_384],
+  ])(
+    "bounds provider default %s and explicit call %s to %s",
+    async (defaultMaxOutputTokens, maxOutputTokens, expected) => {
+      let sent: Record<string, unknown> | undefined;
+      const model = createAdRouter({
+        apiKey: "fixture",
+        baseURL: "http://localhost:8787",
+        ...(defaultMaxOutputTokens === undefined ? {} : { defaultMaxOutputTokens }),
+        fetch: (async (_input, init) => {
+          sent = JSON.parse(String(init?.body));
+          return Response.json({
+            turn_id: "limits",
+            status: "live",
+            ads: [],
+            injection: { mode: "terminal_trailer", placement: "bottom" },
+            settlement: { ad_subsidy: 0 },
+            usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+            assistant: { content: "ok" },
+          });
+        }) as typeof fetch,
+      }).languageModel("deepseek-v4-flash");
+      await model.doGenerate({
+        prompt: [{ role: "user", content: [{ type: "text", text: "hello" }] }],
+        ...(maxOutputTokens === undefined ? {} : { maxOutputTokens }),
+      });
+      expect(sent?.max_output_tokens).toBe(expected);
+    },
+  );
+
   test("uses each model's advertised default reasoning when OpenCode omits a variant", async () => {
     const expected = {
       "deepseek-v4-flash": "medium",
@@ -101,6 +137,7 @@ describe("AdRouter LanguageModelV3", () => {
         prompt: [{ role: "user", content: [{ type: "text", text: "hello" }] }],
       });
       expect(requestBody?.thinking_level).toBe(thinkingLevel);
+      expect(requestBody?.max_output_tokens).toBe(16_384);
     }
   });
 
@@ -274,7 +311,7 @@ describe("AdRouter LanguageModelV3", () => {
     }
     expect(requestBody?.thinking_level).toBe("high");
     expect(requestBody?.runtime_mode).toBeUndefined();
-    expect(requestBody?.max_output_tokens).toBe(4096);
+    expect(requestBody?.max_output_tokens).toBe(9000);
     expect(requestBody?.metadata).toBeUndefined();
   });
 
@@ -426,4 +463,48 @@ describe("AdRouter LanguageModelV3", () => {
     expect(body.metadata).toBeUndefined();
     expect((result.providerMetadata?.adrouter as any).ads[0].tier).toBe("A");
   });
+});
+
+test("truncation retains text and settled usage, withholds tools, and never replays", async () => {
+  let requests = 0;
+  const model = createAdRouter({
+    apiKey: "fixture",
+    baseURL: "http://127.0.0.1:8787",
+    fetch: (async (_input: RequestInfo | URL, _init?: RequestInit) => {
+      requests++;
+      return chunkedNdjson([
+        { type: "text", content: requests === 1 ? "Partial" : "Recovered" },
+        ...(requests === 1
+          ? [
+              {
+                type: "tool_call",
+                tool_call: { id: "call-1", name: "weather", arguments: { city: "SG" } },
+              },
+            ]
+          : []),
+        { type: "ad", ads: [], injection: { mode: "terminal_trailer", placement: "bottom" } },
+        {
+          type: "settlement",
+          settlement: { ad_subsidy: 0 },
+          usage: { input: 10, output: 2, totalTokens: 12 },
+        },
+        requests === 1
+          ? { type: "error", code: "output_truncated", message: "Output reached its token limit" }
+          : { type: "done", assistant: { content: "Recovered" } },
+      ]);
+    }) as typeof fetch,
+  }).languageModel("deepseek-v4-flash");
+  const first = await parts((await model.doStream(call([]))).stream);
+  expect(first.some((part) => part.type === "tool-call")).toBe(false);
+  expect(first.some((part) => part.type === "text-delta" && part.delta === "Partial")).toBe(true);
+  expect(first.find((part) => part.type === "finish")).toMatchObject({
+    usage: { outputTokens: { total: 2 } },
+    finishReason: { unified: "error" },
+  });
+  expect(requests).toBe(1);
+  const next = await parts((await model.doStream(call([]))).stream);
+  expect(next.find((part) => part.type === "finish")).toMatchObject({
+    finishReason: { unified: "stop" },
+  });
+  expect(requests).toBe(2);
 });

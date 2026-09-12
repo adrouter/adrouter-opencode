@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { Config, Plugin, PluginModule } from "@opencode-ai/plugin";
 import { ADROUTER_CODING_MODELS, type AdRouterThinkingLevel } from "./catalog.js";
+import { MAX_OUTPUT_TOKENS } from "./transport/config.js";
 
 function providerPackageSpec(): string {
   const manifest = JSON.parse(
@@ -46,7 +47,7 @@ function model(
     reasoning: true,
     temperature: false,
     tool_call: true,
-    limit: { context, output: 4096 },
+    limit: { context, output: MAX_OUTPUT_TOKENS },
     modalities: { input: ["text"], output: ["text"] },
     variants,
   };

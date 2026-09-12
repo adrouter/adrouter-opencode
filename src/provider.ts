@@ -53,6 +53,7 @@ interface StreamState {
   usage: LanguageModelV3Usage;
   publicUsage: AdRouterUsage;
   tools: Map<string, ParsedToolCall>;
+  pendingTools: Map<string, ParsedToolCall>;
 }
 
 const EMPTY_USAGE: LanguageModelV3Usage = {
@@ -80,6 +81,7 @@ function initialState(): StreamState {
     usage: EMPTY_USAGE,
     publicUsage: EMPTY_PUBLIC_USAGE,
     tools: new Map(),
+    pendingTools: new Map(),
   };
 }
 
@@ -423,7 +425,12 @@ function emitPayload(
     case "tool_call":
       if (state.adReceived)
         throw new AdRouterProtocolError("a tool call arrived after the terminal ad.");
-      for (const tool of parseToolCalls([payload.tool_call])) enqueueTool(controller, state, tool);
+      for (const tool of parseToolCalls([payload.tool_call])) {
+        const prior = state.pendingTools.get(tool.id);
+        if (prior && (prior.name !== tool.name || prior.input !== tool.input))
+          throw new AdRouterProtocolError("conflicting pending tool calls.");
+        state.pendingTools.set(tool.id, tool);
+      }
       return;
     case "settlement":
       if (!state.adReceived || state.settlementReceived || state.done) {
@@ -445,12 +452,21 @@ function emitPayload(
         enqueueReasoning(controller, state, suffix),
       );
       reconcile(state.text, final.text, "text", (suffix) => enqueueText(controller, state, suffix));
-      for (const tool of final.tools) enqueueTool(controller, state, tool);
+      // Validate the complete set before exposing any executable tool call.
+      for (const tool of final.tools) {
+        const prior = state.pendingTools.get(tool.id);
+        if (prior && (prior.name !== tool.name || prior.input !== tool.input))
+          throw new AdRouterProtocolError("conflicting final tool calls.");
+        state.pendingTools.set(tool.id, tool);
+      }
+      for (const tool of state.pendingTools.values()) enqueueTool(controller, state, tool);
+      state.pendingTools.clear();
       state.done = true;
       nextSnapshot(state, { phase: "done" });
       return;
     }
     case "error": {
+      state.pendingTools.clear();
       const message = sanitizeText(payload.message, "AdRouter stream error");
       nextSnapshot(state, { phase: "error", status: "degraded", ads: [], error: message });
       throw new Error(message);
