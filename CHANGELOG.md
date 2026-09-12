@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.0-beta.12] - 2026-09-12
+
+- Generate the coding catalog from Router, adding GLM-5.3 and both Qwen 3.8 models while excluding Kimi.
+- Preserve bounded cancellation cleanup, partial-output retention, output limits and exact package registration.
+
+## 0.1.0-beta.11
+
+- Deliver transport cancellation promptly even when underlying stream cleanup never settles; preserve existing deadlines and protocol validation.
+- Add deterministic coverage for cancellation cleanup. The historical Desktop stall remains unverified, and output defaults are unchanged.
+
 ## 0.1.0-beta.10
 
 - Prevented project configuration from replacing the exact AdRouter provider package, protected

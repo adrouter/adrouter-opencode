@@ -415,7 +415,8 @@ export async function* ndjsonLines(
       }
     }
   } catch (error) {
-    await reader.cancel().catch(() => undefined);
+    // Cancellation acknowledgment must not delay delivery of an abort/error.
+    void reader.cancel().catch(() => undefined);
     throw error;
   } finally {
     reader.releaseLock();

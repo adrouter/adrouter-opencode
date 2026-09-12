@@ -1,7 +1,7 @@
 import type { AdRouterProviderOptions } from "../contracts.js";
 
 export const DEFAULT_BASE_URL = "https://api-staging.adrouter.co";
-export const MAX_OUTPUT_TOKENS = 4096;
+export const MAX_OUTPUT_TOKENS = 16_384;
 export const INTEGRATION_KEY_PATTERN = /^adr_int_[A-Za-z0-9_-]{12}\.[A-Za-z0-9_-]{43}$/;
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 

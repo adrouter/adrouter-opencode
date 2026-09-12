@@ -4,7 +4,7 @@ import packageManifest from "../package.json" with { type: "json" };
 import serverPlugin, { applyAdRouterConfig } from "../src/server.js";
 
 describe("OpenCode server plugin", () => {
-  test("registers the six tool-capable hosted models with endpoint-safe variants", () => {
+  test("registers the nine tool-capable hosted models with endpoint-safe variants", () => {
     const config: Config = {};
     applyAdRouterConfig(config);
     const provider = config.provider?.adrouter as any;
@@ -18,6 +18,9 @@ describe("OpenCode server plugin", () => {
       "mimo-v2.5-pro",
       "agnes-2.0-flash",
       "agnes-2.5-flash",
+      "glm-5.3",
+      "qwen3.8-max",
+      "qwen3.8-flash",
     ]);
     expect(provider.models["deepseek-v4-flash"]).toMatchObject({
       id: "deepseek-v4-flash",
@@ -39,7 +42,8 @@ describe("OpenCode server plugin", () => {
       high: { thinkingLevel: "high" },
     });
     expect(provider.models["mimo-v2.5"].attachment).toBe(false);
-    expect(provider.models["agnes-2.0-flash"].limit).toEqual({ context: 524288, output: 4096 });
+    expect(provider.models["agnes-2.0-flash"].limit).toEqual({ context: 524288, output: 16384 });
+    expect(provider.models["kimi-k3"]).toBeUndefined();
     expect(provider.models["agnes-2.5-pro"]).toBeUndefined();
     expect(provider.models["agnes-2.5-pro-alpha"]).toBeUndefined();
   });
@@ -65,7 +69,7 @@ describe("OpenCode server plugin", () => {
     expect(provider.env).toEqual(["ADROUTER_INTEGRATION_API_KEY"]);
     expect(provider.options).toBeUndefined();
     expect(provider.models["deepseek-v4-flash"].name).toBe("My Flash");
-    expect(provider.models["deepseek-v4-flash"].limit).toEqual({ context: 1048576, output: 4096 });
+    expect(provider.models["deepseek-v4-flash"].limit).toEqual({ context: 1048576, output: 16384 });
     expect(config.disabled_providers).toEqual(["adrouter"]);
   });
 

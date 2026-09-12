@@ -135,9 +135,13 @@ parts, image tool results, attachments, and provider-executed tool approvals
 are intentionally rejected even when the underlying model has vision support.
 
 The plugin advertises each Router model's exact 524,288- or 1,048,576-token
-context window and applies a conservative 4,096-token integration output cap.
+context window and applies a conservative 16,384-token integration output cap.
 Account, provider, and current platform policy may apply lower limits or model
 availability.
+The plugin sends its resolved output limit explicitly. Accounts capped below
+16,384 must use a smaller call limit (or provider default when no call limit is
+supplied) until a separately approved account-policy update. Router rejects an
+explicit value above the account cap; the plugin does not retry paid requests.
 
 ## Endpoint and footer contract
 
@@ -196,7 +200,7 @@ const adrouter = createAdRouter({
   apiKey: "local-test-key",
   baseURL: "http://127.0.0.1:8787",
   model: "deepseek-v4-flash",
-  defaultMaxOutputTokens: 4096,
+  defaultMaxOutputTokens: 16384,
 })
 ```
 
@@ -205,7 +209,7 @@ const adrouter = createAdRouter({
 | integration key | provider `apiKey`, then `ADROUTER_INTEGRATION_API_KEY` |
 | API origin | `ADROUTER_INTEGRATION_API_URL`, provider `baseURL`, staging origin |
 | routed model | `ADROUTER_MODEL_ROUTE`, provider `model`, requested model |
-| output limit | call limit, provider default, 4,096; always clamped to 4,096 |
+| output limit | call limit, provider default, 16,384; always clamped to 16,384 |
 
 Call-specific headers cannot replace authorization, content type, or accept
 headers. Response headers must arrive within 30 seconds, stream chunks within

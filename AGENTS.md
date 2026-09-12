@@ -1,20 +1,23 @@
 # AdRouter OpenCode repository instructions
 
-## Current local candidate and repository boundary
+## Active release authority
+
+`adrouter` is active; `adrouter-co` is backup only. This supersedes conflicting migration guidance while preserving historical receipts. Explicit client release targets are `adrouter/adrouterCLI`, `adrouter/adrouterAgent`, and `adrouter/adrouter-opencode`. Do not infer authority from local remote names or enable backup release workflows. Combined successor candidates include new models, preserved UI/output improvements, and CLI/Desktop presence gating before acceptance; promotion remains separately authorized.
+
+## Repository boundary and release-state source
 
 This independent repository owns `@adrouter/opencode` and uses Bun. Its GitHub repository is
 `adrouter/adrouter-opencode`; never combine its lockfile, Git history, or release state with CLI or
 Desktop.
 
-Public beta.8 remains on `beta`/`latest`. The substantial user-owned, unreleased beta.5
-installation-auth work remains parked in `stash@{0}` as `clean-slate-2026-08-02`; do not apply,
-drop, rewrite, publish, or treat that snapshot as accepted.
+The substantial user-owned, unreleased installation-auth work remains parked in `stash@{0}` as
+`clean-slate-2026-08-02`; do not apply, drop, rewrite, publish, or treat that snapshot as accepted.
 
-Beta.6 is an immutable rejected version: its plugin target was correct, but its unversioned
-provider registration made OpenCode execute public beta.4 and call machine auth. Never promote,
-rebuild, or retag beta.6. Accepted beta.8 binds the provider to its own exact package version; the
-active beta.9 source changes only bounded footer presentation/coverage and release metadata.
-Release mutations require explicit user authorization.
+Do not keep volatile versions or npm aliases in this governance file. Read `../../docs/state.md`
+and the newest workspace parity report, then re-query npm and GitHub before a current claim. Keep
+the checkout, protected source commit, immutable tag, draft assets, npm `candidate`, and public
+`beta`/`latest` distinct. Earlier rejected versions remain immutable and must never be rebuilt or
+retagged; fix forward. Release mutations require explicit user authorization.
 
 ## Source map and toolchain
 
@@ -24,7 +27,7 @@ Release mutations require explicit user authorization.
 - `src/tui.tsx` and `src/presentation.ts` — display-only bottom panel and cumulative savings.
 - `test/`, `scripts/`, and `.github/workflows/` — provider/auth/transport/TUI/release coverage and
   candidate/promotion automation.
-- `release-manifest.json` — beta.9 candidate/final-channel intent, not evidence of publication.
+- `release-manifest.json` — candidate/final-channel intent, not evidence of publication.
 - `dist/`, coverage, tarballs, isolated installs, and acceptance output are generated.
 
 Use Bun 1.3.14 and `bun.lock`; do not add npm, pnpm, or Yarn lockfiles. Preserve OpenCode
@@ -33,23 +36,24 @@ Use Bun 1.3.14 and `bun.lock`; do not add npm, pnpm, or Yarn lockfiles. Preserve
 
 ## Public versus local state
 
-Public npm state was rechecked before beta.9 work on 2026-08-10: `beta`/`latest` resolve to beta.8
-and no `candidate` tag exists. Re-query before every release claim; beta.9 candidate publication
-must not move accepted public channels.
+The provider retains the twelve Router catalog descriptors, excludes Kimi, and registers the nine tool-qualified IDs with generated model-specific
+context/input/output tuples while preserving the integration route's conservative request policy.
+Its registered provider package must bind itself to the exact package version. The integration path
+remains text/tool-only even when another platform's model descriptor accepts images.
 
-The active beta.9 source registers the six currently qualified coding model IDs and their exact
-524,288- or 1,048,576-token context windows while enforcing a conservative 4,096-token integration
-output cap. Its registered provider package must include the exact beta.9 version. The integration
-path remains text/tool-only even when the underlying model accepts images.
+## Protected candidate rules
 
-## Remaining release blockers
-
-- Staging currently exposes the integration endpoint and eight-model catalog, but local source or a
-  package manifest alone never proves the deployed contract; re-run the authenticated canaries.
-- Beta.9 must pass clean-tree checks, protected CI, staging canaries, and registry-backed OpenCode
-  execution before it may be published as `candidate`.
-- The beta.9 immutable tag, staged assets, registry candidate, cross-host acceptance, and draft
-  GitHub release do not exist until their protected release steps succeed.
+- Local source or a package manifest never proves the deployed integration contract; authenticated
+  staging canaries must pass with the exact tagged source before artifacts are created.
+- The protected GitHub secret is `ADROUTER_STAGING_INTEGRATION_API_KEY`; the workflow maps it to
+  runtime `ADROUTER_INTEGRATION_API_KEY`. Verify only the name and mapping, never the value. Invalid
+  integration authentication must fail closed before artifact creation or publication.
+- Pass the same immutable tag as both workflow input and dispatch ref. Do not substitute the
+  default branch or weaken an exact-tag environment policy.
+- Candidate publication, host/version registry smokes, and public-channel finalization are separate
+  gates. Never move `beta`/`latest` or finalize a draft without a separate explicit request.
+- Resume after an npm propagation race only if the exact expected integrity and `candidate` alias
+  already match. Otherwise stop and fix forward.
 - The complete clean-tree `release:check` remains a release gate. Local unit, type, lint, build, and
   release-policy checks do not authorize publication by themselves.
 
@@ -69,10 +73,9 @@ path remains text/tool-only even when the underlying model accepts images.
 
 ## Verification and releases
 
-During local source work, use focused checks first:
+During dirty local source work, use focused non-formatting checks first:
 
 ```sh
-bun run format
 bun run lint
 bun run typecheck
 bun test
