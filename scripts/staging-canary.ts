@@ -18,11 +18,16 @@ for (const modelID of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
   let modelOutputStarted = false;
   let earlyRoutingObserved = false;
   let finalProviderMetadata: unknown;
+  const observedParts: string[] = [];
   const reader = stream.getReader();
   for (;;) {
     const item = await reader.read();
     if (item.done) break;
     const part = item.value;
+    if (observedParts.length < 24) observedParts.push(part.type);
+    if (part.type === "error") {
+      throw part.error instanceof Error ? part.error : new Error(String(part.error));
+    }
     if (part.type === "text-delta") {
       modelOutputStarted = true;
       assistantText += part.delta;
@@ -42,7 +47,14 @@ for (const modelID of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
     }
     if (providerMetadata) finalProviderMetadata = providerMetadata;
   }
-  if (!earlyRoutingObserved) throw new Error(`${modelID}: no early routing metadata was observed.`);
+  if (!earlyRoutingObserved) {
+    const finalPhase =
+      (finalProviderMetadata as { adrouter?: { phase?: string } } | undefined)?.adrouter?.phase ??
+      "missing";
+    throw new Error(
+      `${modelID}: no early routing metadata was observed (final phase: ${finalPhase}; parts: ${observedParts.join(",") || "none"}).`,
+    );
+  }
   const metadata = (finalProviderMetadata as { adrouter?: unknown } | undefined)?.adrouter as
     | {
         phase?: string;

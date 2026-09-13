@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.0-beta.16] - 2026-09-13
+
+- Surface authenticated canary stream errors directly and include bounded, non-sensitive event diagnostics when early routing metadata is absent.
+
 ## [0.1.0-beta.15] - 2026-09-13
 
 ### Added
