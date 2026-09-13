@@ -16,7 +16,7 @@ for (const modelID of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
   const { stream } = await createAdRouter({ apiKey }).languageModel(modelID).doStream(call);
   let assistantText = "";
   let modelOutputStarted = false;
-  let earlyAdObserved = false;
+  let earlyRoutingObserved = false;
   let finalProviderMetadata: unknown;
   const reader = stream.getReader();
   for (;;) {
@@ -30,14 +30,19 @@ for (const modelID of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
       modelOutputStarted = true;
     }
     const providerMetadata = "providerMetadata" in part ? part.providerMetadata : undefined;
-    const routed = providerMetadata?.adrouter as { phase?: string; ads?: unknown[] } | undefined;
-    if (routed?.phase === "routed" && routed.ads?.length) {
+    const routed = providerMetadata?.adrouter as
+      | { phase?: string; ads?: unknown[]; injection?: { mode?: string } }
+      | undefined;
+    if (routed?.phase === "routed") {
       if (modelOutputStarted) throw new Error(`${modelID}: routed ad arrived after model output.`);
-      earlyAdObserved = true;
+      if (routed.injection?.mode !== "stream_start") {
+        throw new Error(`${modelID}: routed metadata did not declare stream_start delivery.`);
+      }
+      earlyRoutingObserved = true;
     }
     if (providerMetadata) finalProviderMetadata = providerMetadata;
   }
-  if (!earlyAdObserved) throw new Error(`${modelID}: no early routed ad was observed.`);
+  if (!earlyRoutingObserved) throw new Error(`${modelID}: no early routing metadata was observed.`);
   const metadata = (finalProviderMetadata as { adrouter?: unknown } | undefined)?.adrouter as
     | {
         phase?: string;
@@ -65,5 +70,8 @@ for (const modelID of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
   ]);
   const ad = panel.snapshot()?.ads[0];
   if (ad && !renderCompactAd(ad, 120)) throw new Error(`${modelID}: TUI rendering failed.`);
+  if (!ad && panel.snapshot()?.ads.length !== 0) {
+    throw new Error(`${modelID}: no-ad result did not preserve an empty panel state.`);
+  }
   console.log(`${modelID}: staging canary passed.`);
 }

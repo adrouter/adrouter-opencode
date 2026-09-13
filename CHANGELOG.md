@@ -1,10 +1,15 @@
-## 0.1.0-beta.13 - 2026-09-12
+# Changelog
+
+## [0.1.0-beta.14] - 2026-09-13
 
 ### Added
 
 - Reserve a permanent three-row sponsor panel; display routed ads during generation and retain them until the next stream. Preserve legacy integration compatibility and Kimi exclusion.
 
-# Changelog
+### Fixed
+
+- Accept authenticated no-ad routing as a valid blank-panel canary result while still requiring
+  `stream_start` metadata before model output.
 
 ## [0.1.0-beta.12] - 2026-09-12
 
