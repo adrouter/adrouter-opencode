@@ -508,3 +508,65 @@ test("truncation retains text and settled usage, withholds tools, and never repl
   });
   expect(requests).toBe(2);
 });
+
+test("publishes an early ad before any model token, then streams and settles normally", async () => {
+  let input!: ReadableStreamDefaultController<Uint8Array>;
+  const encoder = new TextEncoder();
+  const send = (event: unknown) => input.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+  const response = new Response(
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        input = controller;
+      },
+    }),
+    {
+      headers: { "content-type": "application/x-ndjson" },
+    },
+  );
+  const model = createAdRouter({
+    apiKey: "fixture",
+    baseURL: "http://localhost:8787",
+    fetch: (async (_input, _init) => response) as typeof fetch,
+  }).languageModel("qwen3.8-flash");
+  const { stream } = await model.doStream(
+    call([{ role: "user", content: [{ type: "text", text: "hello" }] }]),
+  );
+  const reader = stream.getReader();
+  expect((await reader.read()).value?.type).toBe("stream-start");
+  send({
+    type: "ad",
+    turn_id: "early-1",
+    ads: [{ id: "a", tier: "A", title: "Fixture", body: "Display only", label: "Sponsored" }],
+    status: "live",
+    injection: { mode: "stream_start", placement: "bottom" },
+  });
+  const early = (await reader.read()).value;
+  expect(early?.type).toBe("text-start");
+  expect(JSON.stringify(early)).toContain('"phase":"routed"');
+  expect(JSON.stringify(early)).toContain("Display only");
+  expect((await reader.read()).value?.type).toBe("text-end");
+  send({ type: "thinking", delta: "considering" });
+  send({ type: "text", delta: "answer" });
+  send({
+    type: "settlement",
+    turn_id: "early-1",
+    settlement: { ad_subsidy: 0.002 },
+    usage: { input_tokens: 2, output_tokens: 3 },
+  });
+  send({ type: "done", assistant: { content: "answer", reasoning_content: "considering" } });
+  input.close();
+  const rest: LanguageModelV3StreamPart[] = [];
+  for (;;) {
+    const item = await reader.read();
+    if (item.done) break;
+    rest.push(item.value);
+  }
+  expect(rest.some((part) => part.type === "error")).toBe(false);
+  expect(
+    rest
+      .filter((part) => part.type === "text-delta")
+      .map((part) => part.delta)
+      .join(""),
+  ).toBe("answer");
+  expect(JSON.stringify(rest.at(-1))).toContain('"ad_subsidy":0.002');
+});

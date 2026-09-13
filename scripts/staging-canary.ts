@@ -13,8 +13,32 @@ const call: LanguageModelV3CallOptions = {
 };
 
 for (const modelID of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
-  const result = await createAdRouter({ apiKey }).languageModel(modelID).doGenerate(call);
-  const metadata = result.providerMetadata?.adrouter as
+  const { stream } = await createAdRouter({ apiKey }).languageModel(modelID).doStream(call);
+  let assistantText = "";
+  let modelOutputStarted = false;
+  let earlyAdObserved = false;
+  let finalProviderMetadata: unknown;
+  const reader = stream.getReader();
+  for (;;) {
+    const item = await reader.read();
+    if (item.done) break;
+    const part = item.value;
+    if (part.type === "text-delta") {
+      modelOutputStarted = true;
+      assistantText += part.delta;
+    } else if (part.type === "reasoning-delta" || part.type === "tool-call") {
+      modelOutputStarted = true;
+    }
+    const providerMetadata = "providerMetadata" in part ? part.providerMetadata : undefined;
+    const routed = providerMetadata?.adrouter as { phase?: string; ads?: unknown[] } | undefined;
+    if (routed?.phase === "routed" && routed.ads?.length) {
+      if (modelOutputStarted) throw new Error(`${modelID}: routed ad arrived after model output.`);
+      earlyAdObserved = true;
+    }
+    if (providerMetadata) finalProviderMetadata = providerMetadata;
+  }
+  if (!earlyAdObserved) throw new Error(`${modelID}: no early routed ad was observed.`);
+  const metadata = (finalProviderMetadata as { adrouter?: unknown } | undefined)?.adrouter as
     | {
         phase?: string;
         ads?: Array<Parameters<typeof renderCompactAd>[0]>;
@@ -25,10 +49,6 @@ for (const modelID of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
   if (metadata?.phase !== "done") throw new Error(`${modelID}: missing terminal done metadata.`);
   if (!metadata.usage?.totalTokens) throw new Error(`${modelID}: missing usage.`);
   if (!metadata.settlement) throw new Error(`${modelID}: missing settlement.`);
-  const assistantText = result.content
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("");
   for (const ad of metadata.ads ?? []) {
     if (assistantText.includes(ad.title) || assistantText.includes(ad.body)) {
       throw new Error(`${modelID}: sponsor content leaked into assistant text.`);

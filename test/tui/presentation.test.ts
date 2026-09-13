@@ -92,7 +92,7 @@ describe("tiered presentation", () => {
     ).not.toContain("https://");
   });
 
-  test("uses safe fallbacks, pending economics, and a single compact NONE row", () => {
+  test("uses safe fallbacks and pending economics, leaving NONE blank", () => {
     expect(
       renderAdFooterLines({ id: "missing", tier: "C", title: "", body: "", label: "" }, 120, {
         currentSubsidy: Number.NaN,
@@ -111,7 +111,7 @@ describe("tiered presentation", () => {
         120,
         { currentSubsidy: 99, cumulativeSavings: 99 },
       ),
-    ).toEqual(["TIER NONE: No sponsored content — Privacy guardrail"]);
+    ).toEqual([]);
     expect(renderAdFooterLines(tierC, 0, { cumulativeSavings: 0 })).toEqual([]);
     expect(renderAdFooterLines(tierC, Number.NaN, { cumulativeSavings: 0 })).toEqual([]);
     expect(renderAdFooterLines(tierC, Number.POSITIVE_INFINITY, { cumulativeSavings: 0 })).toEqual(
@@ -204,4 +204,41 @@ describe("tiered presentation", () => {
     state.reconstruct("s2", []);
     expect(state.cumulativeSavings()).toBe(0);
   });
+});
+
+test("clears on tool-continuation start and selects a new turn independently of old sequence numbers", () => {
+  const state = new AdRouterPanelState();
+  const old = {
+    adrouter: {
+      version: 1,
+      turnId: "old",
+      sequence: 9,
+      phase: "done",
+      status: "live",
+      ads: [tierC],
+      settlement: { ad_subsidy: 0.002 },
+    },
+  };
+  const fresh = {
+    adrouter: {
+      version: 1,
+      turnId: "fresh",
+      sequence: 1,
+      phase: "routed",
+      status: "live",
+      ads: [{ ...tierC, id: "fresh" }],
+    },
+  };
+  const parts = [{ metadata: old }, { type: "step-start" }];
+  state.reconstruct("s", [{ id: "a", role: "assistant", parts }]);
+  expect(state.snapshot()).toBeUndefined();
+  expect(state.cumulativeSavings()).toBe(0.002);
+  state.reconstruct("s", [{ id: "a", role: "assistant", parts: [...parts, { metadata: fresh }] }]);
+  expect(state.snapshot()?.turnId).toBe("fresh");
+  expect(state.cumulativeSavings()).toBe(0.002);
+  state.reconstruct("s", [
+    { id: "a", role: "assistant", failed: true, parts: [{ metadata: old }] },
+  ]);
+  expect(state.snapshot()).toBeUndefined();
+  expect(state.cumulativeSavings()).toBe(0.002);
 });

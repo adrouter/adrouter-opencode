@@ -2,7 +2,8 @@
 
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import type { Message } from "@opencode-ai/sdk/v2";
-import { createSignal } from "solid-js";
+import type { JSX } from "@opentui/solid";
+import { createMemo, createSignal, onCleanup } from "solid-js";
 import { ADROUTER_PALETTE, AdRouterPanelState, renderAdFooterLines } from "./presentation.js";
 
 const tui: TuiPlugin = async (api) => {
@@ -20,6 +21,7 @@ const tui: TuiPlugin = async (api) => {
     return api.state.session.messages(sessionID).map((message: Message) => ({
       id: message.id,
       role: message.role,
+      failed: message.role === "assistant" && Boolean(message.error),
       parts: api.state.part(message.id),
     }));
   }
@@ -40,8 +42,8 @@ const tui: TuiPlugin = async (api) => {
   });
 
   api.event.on("message.updated", (event) => {
-    refreshSession();
-    if (event.properties.info.role === "user") changed();
+    const sessionID = refreshSession();
+    if (sessionID === event.properties.info.sessionID) changed();
   });
 
   api.event.on("session.updated", () => {
@@ -53,31 +55,38 @@ const tui: TuiPlugin = async (api) => {
     order: 900,
     slots: {
       app_bottom: () => {
-        revision();
-        refreshSession();
-        const snapshot = state.snapshot();
-        const savings = state.cumulativeSavings();
-        if (
-          !snapshot ||
-          snapshot.status === "off" ||
-          snapshot.status === "degraded" ||
-          !snapshot.ads[0]
-        ) {
-          return null;
-        }
-        const ad = snapshot.ads[0];
-        const width = Math.max(0, api.renderer.width);
-        const palette = ADROUTER_PALETTE[api.theme.mode()];
-        const lines = renderAdFooterLines(ad, width, {
-          currentSubsidy: snapshot.settlement?.ad_subsidy,
-          cumulativeSavings: savings,
+        api.renderer.on("resize", changed);
+        onCleanup(() => api.renderer.off("resize", changed));
+        const lines = createMemo(() => {
+          revision();
+          refreshSession();
+          const snapshot = state.snapshot();
+          const savings = state.cumulativeSavings();
+          const ad =
+            snapshot &&
+            snapshot.status !== "off" &&
+            snapshot.status !== "degraded" &&
+            snapshot.phase !== "error"
+              ? snapshot.ads[0]
+              : undefined;
+          const width = Math.max(0, api.renderer.width);
+          return ad
+            ? renderAdFooterLines(ad, width, {
+                currentSubsidy: snapshot?.settlement?.ad_subsidy,
+                cumulativeSavings: savings,
+              })
+            : [];
         });
-        if (lines.length === 0) return null;
         return (
-          <box flexDirection="column">
-            {lines.map((line) => (
-              <text fg={palette.label}>{line}</text>
-            ))}
+          <box flexDirection="column" height={3} minHeight={3} flexShrink={0} overflow="hidden">
+            {
+              (() =>
+                [0, 1, 2].map((row) => (
+                  <text height={1} fg={ADROUTER_PALETTE[api.theme.mode()].label}>
+                    {lines()[row] || " "}
+                  </text>
+                ))) as unknown as JSX.Element
+            }
           </box>
         );
       },
