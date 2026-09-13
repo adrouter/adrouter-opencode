@@ -570,3 +570,35 @@ test("publishes an early ad before any model token, then streams and settles nor
   ).toBe("answer");
   expect(JSON.stringify(rest.at(-1))).toContain('"ad_subsidy":0.002');
 });
+
+test("publishes stream-start metadata before model output for JSON responses", async () => {
+  const model = createAdRouter({
+    apiKey: "fixture",
+    baseURL: "http://localhost:8787",
+    fetch: (async (_input, _init) =>
+      Response.json({
+        turn_id: "early-json",
+        status: "degraded",
+        ads: [],
+        injection: { mode: "stream_start", placement: "bottom" },
+        settlement: { ad_subsidy: 0 },
+        usage: { inputTokens: 2, outputTokens: 1, totalTokens: 3 },
+        assistant: { content: "answer" },
+      })) as typeof fetch,
+  }).languageModel("deepseek-v4-flash");
+
+  const output = await parts((await model.doStream(call([]))).stream);
+  const routedIndex = output.findIndex(
+    (part) =>
+      "providerMetadata" in part &&
+      (part.providerMetadata?.adrouter as { phase?: string } | undefined)?.phase === "routed",
+  );
+  const textIndex = output.findIndex((part) => part.type === "text-delta");
+  expect(routedIndex).toBeGreaterThan(0);
+  expect(textIndex).toBeGreaterThan(routedIndex);
+  expect(output[textIndex]).toMatchObject({ type: "text-delta", delta: "answer" });
+  expect(output.at(-1)).toMatchObject({
+    type: "finish",
+    providerMetadata: { adrouter: { phase: "done", ads: [] } },
+  });
+});

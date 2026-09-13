@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.0-beta.14] - 2026-09-13
+## [0.1.0-beta.15] - 2026-09-13
 
 ### Added
 
@@ -10,6 +10,7 @@
 
 - Accept authenticated no-ad routing as a valid blank-panel canary result while still requiring
   `stream_start` metadata before model output.
+- Emit the same early routing metadata carrier for negotiated JSON responses as for NDJSON streams.
 
 ## [0.1.0-beta.12] - 2026-09-12
 

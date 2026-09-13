@@ -602,6 +602,18 @@ async function streamModel(
             }
             applyAd(state, payload);
             state.adReceived = true;
+            if (state.earlyAd) {
+              controller.enqueue({
+                type: "text-start",
+                id: "adrouter-routed",
+                providerMetadata: metadata(state.snapshot),
+              });
+              controller.enqueue({
+                type: "text-end",
+                id: "adrouter-routed",
+                providerMetadata: metadata(state.snapshot),
+              });
+            }
             if (!payload.settlement || !payload.usage) {
               throw new AdRouterProtocolError(
                 "the integration JSON response omitted settlement or usage.",
