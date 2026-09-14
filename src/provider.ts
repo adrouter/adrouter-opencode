@@ -48,6 +48,7 @@ interface StreamState {
   reasoningStarted: boolean;
   attachedMetadata: boolean;
   adReceived: boolean;
+  earlyAd: boolean;
   settlementReceived: boolean;
   done: boolean;
   usage: LanguageModelV3Usage;
@@ -76,6 +77,7 @@ function initialState(): StreamState {
     reasoningStarted: false,
     attachedMetadata: false,
     adReceived: false,
+    earlyAd: false,
     settlementReceived: false,
     done: false,
     usage: EMPTY_USAGE,
@@ -123,6 +125,7 @@ function bodyFor(
   return {
     model: selectedModel,
     thinking_level: reasoningLevel(selectedModel, call),
+    ad_delivery: "stream_start",
     context: buildNativeContext(call),
     max_output_tokens: config.maxOutputTokens,
   };
@@ -356,11 +359,15 @@ function reconcile(
 
 function applyAd(state: StreamState, payload: RouterPayload): void {
   const injection = parseInjection(payload.injection);
-  if (injection?.mode !== "terminal_trailer" || injection.placement !== "bottom") {
+  if (
+    (injection?.mode !== "terminal_trailer" && injection?.mode !== "stream_start") ||
+    injection.placement !== "bottom"
+  ) {
     throw new AdRouterProtocolError(
       "the integration response did not declare a terminal bottom placement.",
     );
   }
+  state.earlyAd = injection.mode === "stream_start";
   const outcome = normalizeOutcome(parseAds(payload.ads, payload.ad), payload.status, "live", true);
   const id = turnId(payload);
   nextSnapshot(state, {
@@ -398,10 +405,24 @@ function emitPayload(
       }
       applyAd(state, payload);
       state.adReceived = true;
+      if (state.earlyAd) {
+        // An empty content part carries display metadata without adding model text.
+        // Publish it now, even while the upstream model is still waiting to emit.
+        controller.enqueue({
+          type: "text-start",
+          id: "adrouter-routed",
+          providerMetadata: metadata(state.snapshot),
+        });
+        controller.enqueue({
+          type: "text-end",
+          id: "adrouter-routed",
+          providerMetadata: metadata(state.snapshot),
+        });
+      }
       return;
     }
     case "text":
-      if (state.adReceived)
+      if (state.adReceived && !state.earlyAd)
         throw new AdRouterProtocolError("model output arrived after the terminal ad.");
       enqueueText(
         controller,
@@ -412,7 +433,7 @@ function emitPayload(
       );
       return;
     case "thinking":
-      if (state.adReceived)
+      if (state.adReceived && !state.earlyAd)
         throw new AdRouterProtocolError("reasoning output arrived after the terminal ad.");
       enqueueReasoning(
         controller,
@@ -423,7 +444,7 @@ function emitPayload(
       );
       return;
     case "tool_call":
-      if (state.adReceived)
+      if (state.adReceived && !state.earlyAd)
         throw new AdRouterProtocolError("a tool call arrived after the terminal ad.");
       for (const tool of parseToolCalls([payload.tool_call])) {
         const prior = state.pendingTools.get(tool.id);
@@ -581,6 +602,18 @@ async function streamModel(
             }
             applyAd(state, payload);
             state.adReceived = true;
+            if (state.earlyAd) {
+              controller.enqueue({
+                type: "text-start",
+                id: "adrouter-routed",
+                providerMetadata: metadata(state.snapshot),
+              });
+              controller.enqueue({
+                type: "text-end",
+                id: "adrouter-routed",
+                providerMetadata: metadata(state.snapshot),
+              });
+            }
             if (!payload.settlement || !payload.usage) {
               throw new AdRouterProtocolError(
                 "the integration JSON response omitted settlement or usage.",

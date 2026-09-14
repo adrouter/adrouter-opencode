@@ -77,7 +77,7 @@ export function renderAdFooterLines(
 ): string[] {
   const maximumWidth = Number.isFinite(width) ? Math.max(0, Math.floor(width)) : 0;
   if (maximumWidth === 0) return [];
-  if (ad.tier === "NONE") return [renderCompactAd(ad, maximumWidth)];
+  if (ad.tier === "NONE") return [];
 
   const disclosure = sanitizeText(ad.label, "Sponsored") || "Sponsored";
   const title = sanitizeText(ad.title, "Sponsored placement") || "Sponsored placement";
@@ -131,14 +131,20 @@ export interface OrderedSessionMessage {
   id: string;
   role: "user" | "assistant";
   parts: Iterable<unknown>;
+  failed?: boolean;
 }
 
 function highestMetadata(parts: Iterable<unknown>): AdRouterProviderMetadataV1 | undefined {
   let accepted: AdRouterProviderMetadataV1 | undefined;
   for (const part of parts) {
+    if (part && typeof part === "object" && (part as { type?: unknown }).type === "step-start") {
+      accepted = undefined;
+      continue;
+    }
     const snapshot = extractAdRouterMetadata(part);
     if (!snapshot) continue;
-    if (!accepted || snapshot.sequence > accepted.sequence) accepted = snapshot;
+    if (!accepted || snapshot.turnId !== accepted.turnId || snapshot.sequence > accepted.sequence)
+      accepted = snapshot;
   }
   return accepted;
 }
@@ -158,7 +164,19 @@ export class AdRouterPanelState {
         this.current = undefined;
         continue;
       }
-      const accepted = highestMetadata(message.parts);
+      const parts = Array.from(message.parts);
+      for (const part of parts) {
+        const snapshot = extractAdRouterMetadata(part);
+        if (!snapshot?.turnId) continue;
+        const previous = this.turnSnapshots.get(snapshot.turnId);
+        if (previous && previous.sequence > snapshot.sequence) continue;
+        this.turnSnapshots.set(snapshot.turnId, snapshot);
+        const subsidy = snapshot.settlement?.ad_subsidy;
+        if (typeof subsidy === "number" && Number.isFinite(subsidy) && subsidy >= 0) {
+          this.settlements.set(snapshot.turnId, subsidy);
+        } else this.settlements.delete(snapshot.turnId);
+      }
+      const accepted = message.failed ? undefined : highestMetadata(parts);
       if (!accepted?.turnId) {
         this.current = accepted;
         continue;

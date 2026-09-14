@@ -107,7 +107,9 @@ describe("transport security", () => {
     expect(requestBody?.runtime_mode).toBeUndefined();
     expect(requestBody?.metadata).toBeUndefined();
     expect(requestBody?.tier_override).toBeUndefined();
+    expect(requestBody?.ad_delivery).toBe("stream_start");
     expect(Object.keys(requestBody ?? {}).sort()).toEqual([
+      "ad_delivery",
       "context",
       "max_output_tokens",
       "model",

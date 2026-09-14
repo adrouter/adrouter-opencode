@@ -1,3 +1,7 @@
+# Active iteration: 0.1.0-beta.16 — 13 September 2026
+
+Operator approved Kimi CLI/Desktop qualification, early OpenCode ad delivery with a permanent three-row footer, hosted Router update and immutable successor candidate publication. Kimi stays excluded from OpenCode. Preserve preceding UI/output/presence work and all historical receipts below. beta/latest stay unchanged. Needed Kimi test tokens are authorized; preserve account caps and private-data boundaries. Implementation and qualification are in progress; publication is not yet claimed. Candidates beta.13 and beta.14 were consumed before artifact creation while staging exposed the no-ad canary assertion and missing JSON-path early carrier. Candidate beta.15 added that carrier but its canary still lacked actionable stream diagnostics; immutable fix-forward continues as beta.16.
+
 # Candidate publication authorization — 12 September 2026
 
 The operator explicitly authorized successor candidate publication with Kimi disabled in CLI/Desktop and excluded from OpenCode. Include GLM, both Qwen models, presence gating where applicable and preserved UI/output fixes. Exact-artifact live acceptance continues on candidates; beta/latest finalization remains separately authorized. This supersedes the earlier requirement to finish Kimi qualification before these candidate publications.

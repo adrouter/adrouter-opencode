@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.0-beta.16] - 2026-09-13
+
+- Surface authenticated canary stream errors directly and include bounded, non-sensitive event diagnostics when early routing metadata is absent.
+
+## [0.1.0-beta.15] - 2026-09-13
+
+### Added
+
+- Reserve a permanent three-row sponsor panel; display routed ads during generation and retain them until the next stream. Preserve legacy integration compatibility and Kimi exclusion.
+
+### Fixed
+
+- Accept authenticated no-ad routing as a valid blank-panel canary result while still requiring
+  `stream_start` metadata before model output.
+- Emit the same early routing metadata carrier for negotiated JSON responses as for NDJSON streams.
+
 ## [0.1.0-beta.12] - 2026-09-12
 
 - Generate the coding catalog from Router, adding GLM-5.3 and both Qwen 3.8 models while excluding Kimi.
