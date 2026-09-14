@@ -674,3 +674,11 @@ Presence prompts, full authenticated cross-client matrix, browser vision accepta
 ### Operator scope correction
 
 Kimi K3 is explicitly excluded from OpenCode supported/registered models for now, even if Router later qualifies its tool capability. Preserve its canonical descriptor for catalog compatibility only. OpenCode remains text/tool-only.
+
+## Public beta.16 promotion receipt — 14 September 2026
+
+`@adrouter/opencode@0.1.0-beta.16` is the approved public prerelease. Immutable tag `v0.1.0-beta.16` identifies source commit `e34612622368c95d9da57b0a8b75bae61699d545`; candidate PR #19 merged to active `adrouter/adrouter-opencode` as `4e2ad2bfb7600bac23ad8627d3cdbf54a40959c1`.
+
+The exact-tag finalization workflow passed at https://github.com/adrouter/adrouter-opencode/actions/runs/34791803254, including the protected verifier, OpenCode 1.18.4 and 1.18.15 registry discovery on Linux, macOS and Windows, npm finalization and GitHub prerelease publication. npm `beta` and `latest` both resolve to beta.16, `candidate` is absent, and integrity is `sha512-pj7tnMwjEqANifuTrC5/tpsqnGInxC3/tkW35DwRWca0de4P44hiTJXLtY+s3/NBreYzBw+BO56QV1hrCP4IOg==`. Superseded beta.9 is deprecated with the release-required message.
+
+The public release contains the exact npm tarball, npm artifact manifest and checksum inventory. OpenCode remains integration-key authenticated, text/tool-only, and excludes Kimi from registered models.
