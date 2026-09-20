@@ -3,7 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Config } from "@opencode-ai/plugin";
+import packageManifest from "../package.json" with { type: "json" };
 import releaseManifest from "../release-manifest.json" with { type: "json" };
+import { ADROUTER_CODING_MODELS } from "../src/catalog.js";
 import { applyAdRouterConfig } from "../src/server.js";
 
 interface CommandResult {
@@ -48,6 +50,9 @@ async function verifyProviderExecution(
   env: Record<string, string | undefined>,
   opencodeVersion: string,
 ): Promise<void> {
+  const live = process.env.ADROUTER_SMOKE_LIVE === "true";
+  if (live && !env.ADROUTER_INTEGRATION_API_KEY)
+    throw new Error("The protected integration key is required for candidate acceptance.");
   let requestMethod = "";
   let requestPath = "";
   const server = Bun.serve({
@@ -83,17 +88,30 @@ async function verifyProviderExecution(
       directory,
       {
         ...env,
-        ADROUTER_INTEGRATION_API_URL: server.url.origin,
-        ADROUTER_INTEGRATION_API_KEY: `adr_int_${"A".repeat(12)}.${"B".repeat(43)}`,
+        ...(live
+          ? {}
+          : {
+              ADROUTER_INTEGRATION_API_URL: server.url.origin,
+              ADROUTER_INTEGRATION_API_KEY: `adr_int_${"A".repeat(12)}.${"B".repeat(43)}`,
+            }),
       },
     );
-    success(result, `OpenCode ${opencodeVersion} provider execution`);
-    assert(requestMethod === "POST", `OpenCode ${opencodeVersion} did not POST the provider turn.`);
-    assert(
-      requestPath === "/v1/integrations/turn",
-      `OpenCode ${opencodeVersion} used the wrong provider route: ${requestPath || "none"}.`,
-    );
-
+    if (live)
+      assert(
+        result.exitCode === 0,
+        `OpenCode ${opencodeVersion} authenticated candidate execution failed; private output suppressed.`,
+      );
+    else success(result, `OpenCode ${opencodeVersion} provider execution`);
+    if (!live) {
+      assert(
+        requestMethod === "POST",
+        `OpenCode ${opencodeVersion} did not POST the provider turn.`,
+      );
+      assert(
+        requestPath === "/v1/integrations/turn",
+        `OpenCode ${opencodeVersion} used the wrong provider route: ${requestPath || "none"}.`,
+      );
+    }
     const flags = { assistant: false, bottom: false, done: false, settlement: false, usage: false };
     const inspect = (value: unknown, key = ""): void => {
       if (typeof value === "string") {
@@ -155,8 +173,10 @@ const pluginManifest = JSON.parse(
     "utf8",
   ),
 ) as { version: string };
-if (pluginManifest.version !== "1.18.4") {
-  throw new Error(`Expected OpenCode plugin 1.18.4, received ${pluginManifest.version}.`);
+if (pluginManifest.version !== packageManifest.devDependencies["@opencode-ai/plugin"]) {
+  throw new Error(
+    `Expected OpenCode plugin ${packageManifest.devDependencies["@opencode-ai/plugin"]}, received ${pluginManifest.version}.`,
+  );
 }
 
 const config: Config = {};
@@ -167,14 +187,7 @@ assert(
   `AdRouter provider package must be exact: ${expectedProviderPackage}.`,
 );
 const models = config.provider?.adrouter?.models ?? {};
-const modelIDs = [
-  "deepseek-v4-flash",
-  "deepseek-v4-pro",
-  "mimo-v2.5",
-  "mimo-v2.5-pro",
-  "agnes-2.0-flash",
-  "agnes-2.5-flash",
-] as const;
+const modelIDs = ADROUTER_CODING_MODELS.map((model) => model.id);
 for (const pickerID of modelIDs) {
   const configured = models[pickerID];
   if (!configured) throw new Error(`OpenCode did not register ${pickerID}.`);
@@ -192,6 +205,8 @@ const registryPlugin = process.env.ADROUTER_SMOKE_REGISTRY === "true";
 const pluginSpec =
   requestedPlugin ||
   (registryPlugin ? `${releaseManifest.npm.package}@${releaseManifest.version}` : localPluginURL);
+if (process.env.ADROUTER_SMOKE_LIVE === "true" && !registryPlugin)
+  throw new Error("Live acceptance requires the exact registry candidate.");
 const registryBackedPlugin = pluginSpec.startsWith(`${releaseManifest.npm.package}@`);
 const opencodeVersions = requestedOpenCode
   ? [requestedOpenCode]

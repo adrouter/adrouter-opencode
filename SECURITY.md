@@ -2,9 +2,10 @@
 
 ## Supported versions
 
-Security fixes are provided for the actively supported public channels. Beta.9 is supported through
-`beta` and `latest`; candidate is a separate acceptance channel. Beta.11 is prepared but not yet published; beta.8 is superseded.
-Published npm versions are immutable; fixes use a new version rather than replacing an artifact.
+Security fixes are provided for actively supported public channels. At preparation of beta.17,
+`beta` and `latest` identify beta.16; beta.17 is candidate-only release input until registry
+verification establishes publication. Qualified OpenCode hosts are 1.18.4, 1.18.15, and 1.18.31.
+Published versions and release tags are immutable; fixes use a new version.
 
 ## Reporting
 

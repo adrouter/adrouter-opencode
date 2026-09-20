@@ -90,3 +90,20 @@ scope. Only a clean, committed, exact candidate with Router conformance, package
 cross-host acceptance, and separate release authorization may be tagged or published. Versions
 and tags are immutable; fix forward. Never change protected environments or remote secrets
 without explicit authorization.
+
+## Operation-specific npm recovery
+
+Candidate publication uses OIDC in publish.yml; NPM_TOKEN in npm-publish is only for later metadata.
+Do not use npm whoami or a metadata token as an OIDC candidate gate. Preserve candidate during
+acceptance; npm staged publishing is a separate unpublished stage requiring maintainer approval.
+Inspect exact tagged code before retrying: durable upload-attempt receipts must prevent a second
+upload after an accepted or uncertain result. Resume only matching identity/integrity/provenance and
+candidate state. Retry transient reads for a bounded interval, never auth errors or conflicts.
+Before any metadata write reject candidate conflicts, skip correct aliases and absent cleanup, and
+skip identical full deprecation messages. Never alter correct wording temporarily to force a write.
+For actual interactive challenges give exact package, directory, commands and expected result for
+the operator's own terminal; do not open authentication windows automatically or request tokens/OTPs.
+Local login does not repair CI credentials. Diagnose actual operation and package rights before
+requesting a secret replacement. A 404, whoami, dry run or secret timestamp does not prove authority.
+Read the AdRouter release authentication reference before operator handoff. Documentation does not
+establish historical workflow behavior or authorize secret/account-policy changes.

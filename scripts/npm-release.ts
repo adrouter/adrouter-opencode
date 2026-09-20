@@ -4,7 +4,16 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import packageManifest from "../package.json" with { type: "json" };
 import releaseManifestJson from "../release-manifest.json" with { type: "json" };
-import { isBetaRelease, type ReleasePolicyManifest } from "./release-policy.js";
+import type { ReleasePolicyManifest } from "./release-policy.js";
+import {
+  promoteRelease,
+  publicRegistryJSON,
+  publishCandidate,
+  type RegistryIO,
+  type RegistryPackage,
+  RegistryPendingError,
+  verifyRegistryState,
+} from "./release-registry.js";
 
 const releaseManifest = releaseManifestJson as ReleasePolicyManifest;
 
@@ -20,18 +29,6 @@ interface ArtifactRecord {
   size: number;
   tag: string;
   version: string;
-}
-
-interface RegistryPackage {
-  deprecated?: string;
-  dist?: {
-    attestations?: { provenance?: { predicateType?: string } };
-    integrity?: string;
-  };
-  gitHead?: string;
-  name?: string;
-  repository?: { type?: string; url?: string } | string;
-  version?: string;
 }
 
 function assert(value: unknown, message: string): asserts value {
@@ -53,15 +50,6 @@ function run(command: string, args: string[], capture = false): string {
     );
   }
   return result.stdout ?? "";
-}
-
-function npmJson(args: string[]): unknown {
-  const output = run(
-    "npm",
-    [...args, "--json", "--registry", registry, "--min-release-age=0"],
-    true,
-  ).trim();
-  return output ? JSON.parse(output) : null;
 }
 
 function digest(path: string, algorithm: "sha256" | "sha512", encoding: "base64" | "hex") {
@@ -151,120 +139,99 @@ function verifyArtifact(directoryInput: string, expectedTag: string): ArtifactRe
   return artifact;
 }
 
-function registryTags(): Record<string, string> {
-  return npmJson(["view", releaseManifest.npm.package, "dist-tags"]) as Record<string, string>;
-}
-
-function registryPackage(version: string): RegistryPackage {
-  return npmJson(["view", `${releaseManifest.npm.package}@${version}`]) as RegistryPackage;
-}
-
-function pause(milliseconds: number): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
-}
-
-function verifyRegistryOnce(
-  artifactFile: string,
-  state: "candidate" | "final" | "resumable",
-): void {
-  const artifact = readArtifact(resolve(artifactFile));
-  const remote = registryPackage(artifact.version);
-  const tags = registryTags();
-  const candidate = releaseManifest.release.candidateTag;
-  const finalMatches = Object.entries(releaseManifest.release.finalTags).every(
-    ([tag, version]) => tags[tag] === version,
-  );
-  const candidateMatches = tags[candidate] === artifact.version;
-
-  assert(
-    remote.name === artifact.name && remote.version === artifact.version,
-    "Registry metadata differs.",
-  );
-  assert(remote.dist?.integrity === artifact.integrity, "Registry tarball integrity differs.");
-  if (remote.gitHead !== undefined) {
-    assert(remote.gitHead === artifact.commit, "Registry gitHead differs from the release commit.");
-  }
-  const repository =
-    typeof remote.repository === "string" ? remote.repository : remote.repository?.url;
-  assert(
-    repository?.replace(/^git\+/, "").replace(/\.git$/, "") ===
-      "https://github.com/adrouter/adrouter-opencode",
-    "Registry repository differs.",
-  );
-  assert(
-    remote.dist?.attestations?.provenance?.predicateType === "https://slsa.dev/provenance/v1",
-    "Registry provenance attestation is missing.",
-  );
-  if (state === "candidate") assert(candidateMatches, "Candidate tag does not target the release.");
-  if (state === "final") {
-    assert(finalMatches, "Final npm tags do not match the release manifest.");
-    assert(tags[candidate] === undefined, "Candidate tag remains after promotion.");
-    const supersededVersion = releaseManifest.release.supersedes;
-    if (supersededVersion) {
-      const superseded = registryPackage(supersededVersion);
-      assert(
-        superseded.deprecated?.includes(artifact.version),
-        `Superseded ${supersededVersion} is not deprecated.`,
-      );
-    }
-  }
-  if (state === "resumable") {
-    assert(candidateMatches || finalMatches, "Release is neither a candidate nor finalized.");
-  }
-  console.log(`${artifact.name}@${artifact.version} matches registry state ${state}.`);
-}
-
-function verifyRegistry(artifactFile: string, state: "candidate" | "final" | "resumable"): void {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= 12; attempt += 1) {
-    try {
-      verifyRegistryOnce(artifactFile, state);
-      return;
-    } catch (error) {
-      lastError = error;
-      if (attempt === 12) break;
-      console.warn(`Registry state ${state} is not visible yet; retrying (${attempt}/12).`);
-      pause(5_000);
-    }
-  }
-  throw lastError;
-}
-
-function promote(artifactFile: string): void {
-  const artifact = readArtifact(resolve(artifactFile));
-  verifyRegistry(artifactFile, "resumable");
-  const before = registryTags();
-  for (const [tag, version] of Object.entries(releaseManifest.release.finalTags)) {
-    if (before[tag] === version) continue;
-    run("npm", ["dist-tag", "add", `${artifact.name}@${version}`, tag, "--registry", registry]);
-  }
-  const current = registryTags();
-  if (current[releaseManifest.release.candidateTag] !== undefined) {
-    assert(
-      current[releaseManifest.release.candidateTag] === artifact.version,
-      "Candidate tag points to a conflicting version.",
+const registryIO: RegistryIO = {
+  async tags() {
+    const tags = await publicRegistryJSON<Record<string, string>>(
+      `${registry}-/package/${encodeURIComponent(releaseManifest.npm.package)}/dist-tags`,
     );
-    run("npm", [
-      "dist-tag",
-      "rm",
-      artifact.name,
-      releaseManifest.release.candidateTag,
-      "--registry",
-      registry,
-    ]);
-  }
-  const supersededVersion = releaseManifest.release.supersedes;
-  if (supersededVersion) {
-    const channel = isBetaRelease(artifact.version) ? "beta" : "latest";
-    run("npm", [
-      "deprecate",
-      `${artifact.name}@${supersededVersion}`,
-      `Superseded by ${artifact.name}@${artifact.version}; install @${channel}.`,
-      "--registry",
-      registry,
-    ]);
-  }
-  verifyRegistry(artifactFile, "final");
+    if (!tags) throw new RegistryPendingError("Public package tags are unavailable.");
+    return tags;
+  },
+  package(version) {
+    return publicRegistryJSON<RegistryPackage>(
+      `${registry}${encodeURIComponent(releaseManifest.npm.package)}/${encodeURIComponent(version)}`,
+    );
+  },
+  write(args) {
+    run("npm", [...args, "--registry", registry]);
+  },
+};
+
+async function verifyRegistry(file: string, state: "candidate" | "final" | "resumable") {
+  await verifyRegistryState(registryIO, readArtifact(resolve(file)), releaseManifest, state);
+  console.log(`Registry state ${state} verified.`);
+}
+
+async function publish(directoryInput: string, tag: string) {
+  const directory = resolve(directoryInput);
+  const artifact = verifyArtifact(directory, tag);
+  const repository = "adrouter/adrouter-opencode";
+  assert(
+    process.env.GITHUB_REPOSITORY === repository && process.env.GITHUB_REF === `refs/tags/${tag}`,
+    "Candidate publication requires the canonical exact-tag workflow.",
+  );
+  const filename = (state: string) => `npm-publication-${state}.json`;
+  await publishCandidate(
+    {
+      ...registryIO,
+      async attempted() {
+        const release = JSON.parse(
+          run("gh", ["release", "view", tag, "--repo", repository, "--json", "assets"], true),
+        ) as { assets: Array<{ name: string }> };
+        const receipts = release.assets.filter((asset) =>
+          [filename("started"), filename("accepted")].includes(asset.name),
+        );
+        for (const receipt of receipts) {
+          run("gh", [
+            "release",
+            "download",
+            tag,
+            "--repo",
+            repository,
+            "--pattern",
+            receipt.name,
+            "--dir",
+            directory,
+          ]);
+          const recorded = JSON.parse(readFileSync(join(directory, receipt.name), "utf8"));
+          assert(
+            recorded.tag === tag &&
+              recorded.commit === artifact.commit &&
+              recorded.integrity === artifact.integrity &&
+              recorded.name === artifact.name &&
+              recorded.version === artifact.version,
+            "Publication receipt identity differs.",
+          );
+        }
+        return receipts.length > 0;
+      },
+      record(state) {
+        const file = join(directory, filename(state));
+        writeFileSync(
+          file,
+          `${JSON.stringify({ schema: 1, name: artifact.name, version: artifact.version, tag, commit: artifact.commit, integrity: artifact.integrity, state, runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT, recordedAt: new Date().toISOString() }, null, 2)}\n`,
+        );
+        // Write-once release assets survive job reruns and new workflow dispatches.
+        run("gh", ["release", "upload", tag, file, "--repo", repository]);
+      },
+      publish() {
+        run("npm", [
+          "publish",
+          join(directory, artifact.filename),
+          "--tag",
+          "candidate",
+          "--access",
+          "public",
+          "--ignore-scripts",
+          "--provenance",
+          "--registry",
+          registry,
+        ]);
+      },
+    },
+    artifact,
+    releaseManifest,
+  );
 }
 
 const [command, ...args] = process.argv.slice(2);
@@ -283,16 +250,21 @@ if (command === "create" && args.length === 2) {
 ) {
   const [artifact, state] = args;
   assert(artifact && state, "Registry arguments are missing.");
-  verifyRegistry(artifact, state as "candidate" | "final" | "resumable");
+  await verifyRegistry(artifact, state as "candidate" | "final" | "resumable");
+} else if (command === "publish" && args.length === 2) {
+  const [directory, tag] = args;
+  assert(directory && tag, "Publish arguments are missing.");
+  await publish(directory, tag);
 } else if (command === "promote" && args.length === 1) {
   const [artifact] = args;
   assert(artifact, "Promote artifact is missing.");
-  promote(artifact);
+  await promoteRelease(registryIO, readArtifact(resolve(artifact)), releaseManifest);
 } else {
   throw new Error(
     "Usage: bun scripts/npm-release.ts create <dir> <tag>\n" +
       "   or: bun scripts/npm-release.ts verify <dir> <tag>\n" +
       "   or: bun scripts/npm-release.ts registry <artifact.json> <candidate|final|resumable>\n" +
+      "   or: bun scripts/npm-release.ts publish <dir> <tag>\n" +
       "   or: bun scripts/npm-release.ts promote <artifact.json>",
   );
 }
