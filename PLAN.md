@@ -1,3 +1,113 @@
+# Plan: OpenCode 1.18.31 candidate and release recovery — 20 September 2026
+
+## Goal
+Build and qualify beta.17 for OpenCode 1.18.31 while retaining 1.18.4/1.18.15, then publish only candidate through protected OIDC.
+
+## Context
+The operator approved implementation, protected merge/tag/candidate publication, and shared guidance updates. Public beta/latest remain beta.16. Existing canonical AGENTS.md changes and installation-auth stash are preserved; implementation uses an isolated checkout.
+
+## Research Summary
+Published OpenCode plugin 1.18.4 and 1.18.31 declarations/runtime match; the SDK has small unrelated changes. Release history confirms metadata retries and accepted-but-invisible uploads need explicit recovery. npm candidate publication is distinct from staged publishing.
+
+## Constraints
+Preserve runtime behavior, provider/auth contracts, sponsor isolation, Bun 1.3.14 and immutable artifacts. No secret replacement, account-policy changes, promotion, or Router deployment. Read exact workflows before operation-specific credential decisions.
+
+## Out of Scope
+CLI/Desktop runtime or workflow changes, installation authentication, new models, public promotion.
+
+## Reversibility
+Use scoped commits and protected main; no version/tag replacement. Preserve historical receipts below. Failed immutable inputs require an unused successor.
+
+---
+
+## Step A: Compatibility and release recovery
+### Status
+`in_progress`
+### Objective
+Build against the latest stable SDK and make release retries reconcile exact state.
+### Tasks
+- [ ] Update SDK lock, three-version matrix, packaged checks, beta.17 metadata and public docs.
+- [ ] Add durable upload-start/acceptance receipts, guarded publication, bounded registry reads, and idempotent metadata operations.
+### Relevant Files
+package.json, bun.lock, release-manifest.json, scripts/, test/release/, .github/workflows/publish.yml.
+### Expected Changes
+Modify compatibility and release tooling; add focused release recovery tests.
+### Do Not Modify
+Product APIs, parked authentication experiment, unrelated working trees.
+### Commands
+`bun run lint`; `bun run typecheck`; `bun test`; `bun run build`; `bun run release:policy`.
+### Acceptance Criteria
+- [ ] Exact matching candidates resume without upload; uncertain outcomes stop; conflicts/auth errors fail immediately.
+- [ ] Absent aliases and identical deprecations cause no write.
+### Validation Results
+Local lint, typecheck, 69 tests, build and release policy passed; clean-input release checks pending.
+### Findings / Notes
+Candidate OIDC and later NPM_TOKEN metadata credentials are separate.
+
+---
+
+## Step B: Governance
+### Status
+`todo`
+### Objective
+Persist verified operation-specific guidance without changing other client implementations.
+### Tasks
+- [ ] Update workspace/release/client AGENTS and installed AdRouter skill/reference.
+- [ ] Validate skill, references, scoped manifest checksums and preserve existing edits.
+### Relevant Files
+Workspace and release AGENTS.md files; installed AdRouter skill; shared documentation manifest.
+### Expected Changes
+Focused guidance updates and scoped checksum refresh.
+### Do Not Modify
+CLI/Desktop source, workflows, secrets, raw history.
+### Commands
+Skill quick_validate.py, JSON/checksum verification, git diff --check.
+### Acceptance Criteria
+- [ ] Correct per-client credentials, candidate lifecycle and operator-only authentication handoffs.
+### Validation Results
+Not run.
+### Findings / Notes
+No automatic browser/terminal launch; no temporary deprecation-message workaround.
+
+---
+
+## Step C: Final verification and cleanup
+### Status
+`todo`
+### Objective
+Publish the exact qualified candidate and retain public aliases.
+### Tasks
+- [ ] Clean-input release:check, protected platform CI/history scan, PR merge and immutable tag.
+- [ ] Protected staging canaries, artifact inspection, exact-tag candidate dispatch and registry matrix.
+- [ ] Exact-candidate live/footer acceptance; record honest evidence and outstanding gates.
+### Relevant Files
+Release docs, workflow, manifest and dated receipt.
+### Expected Changes
+Candidate-only public artifact, evidence and final plan status.
+### Do Not Modify
+beta/latest, package account policy, deployed Router.
+### Commands
+`bun install --frozen-lockfile`; `bun run release:check`; protected GitHub workflows.
+### Acceptance Criteria
+- [ ] Registry candidate matches recorded integrity; nine compatibility lanes pass.
+- [ ] beta/latest remain beta.16; GitHub release stays draft.
+### Validation Results
+Not run.
+### Findings / Notes
+No publish attempt is a permission probe; operator handoff only for an actual required challenge.
+
+## Follow-up Work
+Separately authorized promotion after acceptance.
+
+## Decision Log
+| Date | Decision | Rationale | Impact |
+| --- | --- | --- | --- |
+| 2026-09-20 | Retain older hosts; preserve OIDC; candidate only | Operator-approved plan | Matrix 1.18.4/1.18.15/1.18.31; public aliases unchanged |
+
+---
+
+# Historical plans and receipts (preserved)
+
 # Active iteration: 0.1.0-beta.16 — 13 September 2026
 
 Operator approved Kimi CLI/Desktop qualification, early OpenCode ad delivery with a permanent three-row footer, hosted Router update and immutable successor candidate publication. Kimi stays excluded from OpenCode. Preserve preceding UI/output/presence work and all historical receipts below. beta/latest stay unchanged. Needed Kimi test tokens are authorized; preserve account caps and private-data boundaries. Implementation and qualification are in progress; publication is not yet claimed. Candidates beta.13 and beta.14 were consumed before artifact creation while staging exposed the no-ad canary assertion and missing JSON-path early carrier. Candidate beta.15 added that carrier but its canary still lacked actionable stream diagnostics; immutable fix-forward continues as beta.16.

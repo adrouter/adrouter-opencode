@@ -1,227 +1,114 @@
 # Release runbook
 
-> Current candidate: security fix-forward `0.1.0-beta.13`. Public `beta` and `latest` remain on
-> immutable beta.9 until separate candidate acceptance and finalization.
+The beta.17 input targets OpenCode 1.18.31 and retains 1.18.4/1.18.15 compatibility.
+Public beta/latest remain beta.16 until separately authorized promotion. A manifest describes intent;
+query npm and GitHub for actual publication state.
 
-## Hard prerequisites
+## Prepare clean exact source
 
-- Release only from a clean clone of `adrouter/adrouter-opencode`; never push the parent workspace.
-- Merge through protected `main` after Linux/macOS/Windows CI and the history secret scan pass.
-- Keep immutable `v*` tags, secret scanning, private vulnerability reporting, and protected release
-  environments enabled.
-- Use Bun 1.3.14 and run `bun install --frozen-lockfile` plus `bun run release:check`.
-- Never rebuild a staged artifact, overwrite a version/tag, or publish without the explicit
-  `candidate` tag.
+Use Bun 1.3.14 and bun.lock. Preserve unrelated work and the parked installation-auth experiment.
+Run lint, typecheck, tests, build and release:policy while editing. From clean committed input run
+`bun install --frozen-lockfile` and `bun run release:check`. Merge through protected main after
+Linux/macOS/Windows CI and history scanning pass. Preserve linear history with a supported merge
+method; do not change repository protections.
 
-## Authentication and protected environments
+Confirm the next version and Git tag are unused. Tag the exact accepted main commit with an annotated
+immutable v-prefixed version and push only that tag. A consumed version/tag is never replaced.
+Tag staging uses the protected adrouter-staging environment, reruns release checks and authenticated
+canaries, and records the tarball, SHA256SUMS and npm-artifacts.json on a draft GitHub prerelease.
+Inspect source SHA, package contents, checksums and integrity before publication. All later operations
+use the same staged tarball; never rebuild a replacement release artifact.
 
-Authenticate GitHub CLI in a browser session and verify canonical access:
+## Authentication by operation
 
-```sh
-gh auth login -h github.com -p https -w
-gh auth status
-gh repo view adrouter/adrouter-opencode
-```
+Candidate publishing uses npm OIDC, with `id-token: write`, canonical repository
+`adrouter/adrouter-opencode`, workflow `publish.yml`, and environment `npm-publish`. Inspect the
+exact tagged workflow and trusted publisher configuration when diagnosing authentication. Candidate
+publication does not require NPM_TOKEN or npm whoami. npm whoami cannot validate OIDC.
 
-The account must be able to push branches and annotated tags, merge release PRs, dispatch workflows,
-manage releases/environment secrets, and approve protected deployments. If the organization uses
-SSO, authorize the GitHub CLI credential for it.
+The staging credential is only ADROUTER_STAGING_INTEGRATION_API_KEY, mapped to
+ADROUTER_INTEGRATION_API_KEY. Inspect names/mappings, never values. Authentication failures stop
+before artifact creation or publication. Live checks must use the dedicated integration route.
 
-Create two GitHub environments with required reviewers:
+Later metadata finalization uses npm-publish's NPM_TOKEN. It needs package metadata-write access,
+valid owner/scope/expiry/IP constraints and compatible 2FA policy. A stage-only token can qualify
+for metadata but cannot directly publish new versions. Organization access is not package access.
+Secret presence/timestamps, npm whoami and publish dry runs do not establish write authority.
+Local npm login does not update CI credentials. Do not change credentials or account policy without
+specific authority, or replace a failed OIDC workflow with local publishing.
 
-- `adrouter-staging` contains only `ADROUTER_STAGING_INTEGRATION_API_KEY`, a low-quota revocable
-  30-day staging integration credential that can run both hosted model canaries.
-- `npm-publish` contains a temporary `NPM_TOKEN` only during final promotion. Use a granular token
-  limited to `@adrouter/opencode`, read/write, automation/bypass-2FA enabled, and valid for no more
-  than seven days.
+## Publish candidate
 
-Enter secrets through an interactive prompt or GitHub UI; never put values in chat, command
-arguments, logs, source, or release notes:
-
-```sh
-gh secret set ADROUTER_STAGING_INTEGRATION_API_KEY --repo adrouter/adrouter-opencode --env adrouter-staging
-gh secret set NPM_TOKEN --repo adrouter/adrouter-opencode --env npm-publish
-```
-
-The npm owner account must have 2FA and read/write ownership of `@adrouter/opencode`. Trusted
-publishing must be restricted to organization `adrouter`, repository `adrouter-opencode`, workflow
-`publish.yml`, and environment `npm-publish`. Candidate publication uses OIDC; the temporary token
-is used only for dist-tags and optional deprecation.
-
-Verify or create the trusted-publisher binding after npm browser/2FA authentication:
+Use the same immutable tag as input and dispatch ref (substitute the actual release version):
 
 ```sh
-npm trust list @adrouter/opencode
-npm trust github @adrouter/opencode \
-  --file publish.yml \
-  --repository adrouter/adrouter-opencode \
-  --environment npm-publish \
-  --yes
+gh workflow run publish.yml --repo adrouter/adrouter-opencode \
+  --ref v0.1.0-beta.17 -f tag=v0.1.0-beta.17 -f phase=publish-candidate
 ```
 
-## Manifest channel policy
+The publisher verifies exact assets, rejects conflicting candidates, and records write-once
+npm-publication-started.json before upload, followed by npm-publication-accepted.json after npm
+accepts it. These operational receipts are additional draft-release assets, not replacements for
+the immutable artifact manifest or checksums. The workflow uses OIDC and explicit --tag candidate.
 
-`release-manifest.json` is schema 2 and is authoritative:
+Already-published versions skip upload only after identity, integrity, source when present,
+provenance and candidate alias match. If an attempt receipt exists but the version is invisible,
+stop uploads and investigate npm processing. If the upload outcome is uncertain, do not retry it.
+Read-only registry verification retries transient visibility/network failures with bounded backoff
+for at most ten minutes. Authorization failures and integrity/alias conflicts fail immediately.
+After visibility timeout, leave the release pending; do not publish it again or rebuild it.
 
-- Beta: `version`, `beta`, and `latest` all identify the new beta; `githubPrerelease` is true and
-  `supersedes` may identify the preceding beta.
-- Stable: `latest` identifies the stable version, `beta` preserves the accepted numbered beta,
-  `githubPrerelease` is false, `supersedes` is absent, and `release.soak` records the beta version,
-  finalization time, and macOS/Linux/Windows GitHub Actions evidence URLs.
-- `candidate` is temporary and must be absent after finalization.
+Candidate checks include anonymous exact-version imports/discovery/execution on Linux, macOS and
+Windows for every manifest host version, followed by a protected authenticated exact-candidate run
+through the SDK-pinned OpenCode host. Logs expose pass/fail metadata only, not credentials, model
+responses or sponsor copy. Record separate interactive footer acceptance honestly; unit/mounted
+renderer coverage is not a claim about a physical interactive session.
 
-The beta.9 operator exception below temporarily relaxes only that final cleanup invariant. It does
-not permit candidate to point anywhere other than the exact package on both public channels.
+Keep candidate through acceptance. Successful candidate completion leaves beta/latest unchanged
+and the OpenCode GitHub release draft. An npm candidate is published and installable; npm staged
+publishing is a separate unpublished stage requiring maintainer 2FA approval. Do not request a
+stage-approval command unless an actual verified matching stage exists.
 
-`bun run release:policy` rejects channel mismatches. Stable additionally requires the beta tag,
-at least 48 elapsed hours, all three evidence URLs, and a diff limited to release metadata and
-documentation. Any runtime change requires a new unused beta and a restarted soak.
+## Separately authorized finalization
 
-## Prepare and stage a release
+After candidate acceptance, dispatch phase=finalize-release using the same exact tag for input/ref.
+The protected workflow verifies registry integrity and the platform matrix before metadata writes.
+It rejects candidate conflicts, skips correct final aliases, verifies final aliases before removing
+a matching candidate, skips absent candidate cleanup, and compares complete deprecation wording.
+The manifest's optional supersedes field controls deprecation; ordinary compatibility candidates
+need not deprecate a working public version. Never change correct text temporarily to force a write.
+After final verification the workflow publishes the GitHub prerelease. Stable releases retain the
+release-policy requirement for a 48-hour accepted-beta soak and platform evidence.
 
-1. Update `package.json`, `release-manifest.json`, `CHANGELOG.md`, public documentation, and any
-   version-specific workflow/runbook text together.
-2. Run:
+## Operator handoff and recovery
 
-   ```sh
-   bun install --frozen-lockfile
-   bun run format
-   bun run release:check
-   git diff --check
-   ```
+After an actual authorization failure stop writes and diagnose the exact failed operation. A 404
+alone is not proof of token insufficiency. Re-query integrity and partial-success state before any
+retry. Keep working protected finalizers; do not rerun completed writes or unpublish packages.
 
-3. Open a release PR and merge only after all required checks pass.
-4. Resolve the protected-main merge commit. Create and verify an annotated immutable tag on exactly
-   that commit, then push it:
-
-   ```sh
-   git tag -a v<version> <merge-commit> -m "Release v<version>"
-   git cat-file -t v<version>
-   git rev-parse v<version>^{}
-   git push origin v<version>
-   ```
-
-5. Approve the `adrouter-staging` deployment. `release.yml` reruns all gates, runs both authenticated
-   model canaries, packs once, records the commit/checksums/integrity, and creates a draft GitHub
-   release with exactly one tarball, `SHA256SUMS`, and `npm-artifacts.json`. Its prerelease state is
-   selected from the manifest.
-6. Inspect the tag, commit, three assets, SHA-256, npm integrity, and package metadata. Every later
-   step must use this exact tarball.
-
-## Publish candidate and finalize
-
-Dispatch candidate publication:
+If interaction is required, provide the operator the exact package, directory, action, commands and
+expected result. Do not automatically open a browser/terminal, read npm credentials, or request a
+token/OTP in chat. The operator runs browser authentication in their own terminal when needed:
 
 ```sh
-gh workflow run publish.yml --repo adrouter/adrouter-opencode --ref main \
-  -f tag=v<version> -f phase=publish-candidate
+cd /Users/ahmadzuhri/antigravity/3days/adrouter_release/adrouter-opencode
+npm login --auth-type=web --registry=https://registry.npmjs.org/
+npm whoami --registry=https://registry.npmjs.org/
+npm dist-tag ls @adrouter/opencode --registry=https://registry.npmjs.org/
 ```
 
-Approve `npm-publish`. The workflow verifies the exact draft assets, publishes the tarball under
-`candidate` with npm OIDC/provenance, and verifies registry metadata and integrity. It does not move
-`beta` or `latest`.
+Only when replacing a confirmed-invalid metadata credential is authorized, the operator enters the
+value at the interactive prompt for `gh secret set NPM_TOKEN --env npm-publish -R adrouter/adrouter-opencode`.
+A browser login does not repair that secret. Give a manual cleanup command only when promotion is
+authorized, cleanup is due, and candidate matches the intended release. Skip absent tags and stop on
+conflicts. Account/trust/token governance and stage approval may require interactive proof even
+when a token can perform ordinary metadata writes.
 
-After candidate verification, dispatch finalization:
+Verify final aliases, candidate state, exact configured deprecations, artifact integrity/provenance
+and GitHub draft/prerelease state independently. Retain receipts. Revoke temporary credentials only
+after their authorized operations and verification are complete; never change secrets automatically.
 
-Before dispatching finalization, install the exact registry candidate through OpenCode and complete
-one authenticated staging turn. The turn must finish with assistant output, terminal-bottom
-metadata, settlement, and usage, and it must not reach machine auth. A failure leaves `beta` and
-`latest` unchanged and requires a new immutable candidate.
-
-```sh
-gh workflow run publish.yml --repo adrouter/adrouter-opencode --ref main \
-  -f tag=v<version> -f phase=finalize-release
-```
-
-Approve each protected pause only after the preceding gates are green. The workflow installs the
-registry candidate anonymously on Linux, macOS, and Windows for every OpenCode version listed in
-the manifest. It then applies exactly the manifest's final tags, removes `candidate`, optionally
-deprecates `supersedes`, and publishes GitHub with the manifest's prerelease state.
-
-The workflow is resumable only when tag, commit, artifact, integrity, and registry metadata are
-exact. Fix workflow defects through protected `main`; never retag or rebuild.
-
-## Beta.9 public release, cleanup, and stable 0.1.0
-
-Beta.6 was rejected before channel promotion because its unversioned provider registration resolved
-public beta.4 at execution time. Keep beta.6 immutable and deprecated; never promote or rebuild it.
-
-Beta.9 is the accepted public beta on both `beta` and `latest`. Its finalization passed the complete
-release-integrity and macOS/Linux/Windows OpenCode registry matrix. npm accepted both public tag
-writes but returned `403` for deletion of `candidate`, so the operator-authorized recovery published
-the unchanged GitHub prerelease while retaining `candidate` on the same immutable beta.9 package and
-skipping beta.8 deprecation. Candidate cleanup remains required before the stable soak verifier; it
-must not rebuild, retag, or replace beta.9.
-
-Start or restart the stable clock only after the retained beta.9 candidate alias is removed. For at
-least 48 hours after cleanup:
-
-- retain successful anonymous packaged-user workflow evidence for macOS, Linux, and Windows;
-- keep both authenticated model canaries green;
-- verify an installed interactive session renders settled Tier A exactly like Tier B/C, uses at
-  most three bounded rows, and shows current subsidy plus deduplicated savings;
-- treat any install, privacy, routing, settlement, or display regression as release-blocking.
-
-At or after the 48-hour point, dispatch the non-mutating published-channel verifier and approve its
-`adrouter-staging` canary job:
-
-```sh
-gh workflow run soak.yml --repo adrouter/adrouter-opencode --ref main \
-  -f version=0.1.0-beta.9 -f channel=beta
-```
-
-Record its successful run URL for the `darwin`, `linux`, and `windows` cohort evidence fields. The
-same run is valid for all three fields because its required matrix contains every supported OS and
-OpenCode version plus both authenticated canaries.
-
-After a clean soak, the stable PR may modify only `package.json`, `release-manifest.json`,
-`CHANGELOG.md`, `README.md`, `SECURITY.md`, `RELEASE.md`, and `PLAN.md`. Set `version=0.1.0`,
-`latest=0.1.0`, `beta=0.1.0-beta.9`, remove `supersedes`, set `githubPrerelease=false`, and record
-the authenticated soak evidence. Source, tests, scripts, workflows, and dependencies must remain
-identical to beta.9. Publish stable through the same candidate and finalization phases.
-
-## Independent verification and cleanup
-
-Use an anonymous npm configuration for registry checks:
-
-```sh
-env -u NODE_AUTH_TOKEN -u NPM_TOKEN \
-  NPM_CONFIG_USERCONFIG=/tmp/adrouter-empty-npmrc \
-  NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ \
-  ADROUTER_SMOKE_REGISTRY=true \
-  bun run plugin:check
-```
-
-Verify public state:
-
-```sh
-npm view @adrouter/opencode dist-tags --json
-npm view @adrouter/opencode@<version> dist.integrity dist.attestations --json
-gh release view v<version> --repo adrouter/adrouter-opencode \
-  --json isDraft,isPrerelease,url,assets,tagName
-```
-
-The smoke test must import the root/server/TUI targets, discover all six tool-capable AdRouter models,
-and recognize the `AdRouter integration API key (adr_int_)` auth method without
-`Unknown provider "adrouter"`.
-
-After each successful beta or stable release, delete the GitHub secret and revoke the corresponding
-npm token in the npm UI. Deleting the GitHub secret does not revoke the registry token:
-
-```sh
-gh secret delete NPM_TOKEN --repo adrouter/adrouter-opencode --env npm-publish
-```
-
-Keep the staging key only while canaries remain useful; rotate or revoke it after suspected exposure.
-
-## Recovery
-
-- Before final promotion, leave `beta`/`latest` unchanged, remove or replace only `candidate`,
-  deprecate the rejected immutable version, and fix forward.
-- Beta.6 is rejected; never overwrite it.
-- If beta.9 develops a defect, preserve its immutable artifacts and fix forward through beta.10;
-  never overwrite beta.9.
-- If stable 0.1.0 is invalid after beta.9 finalization, move `latest` back to beta.9, deprecate
-  0.1.0, and fix forward through
-  `0.1.1-beta.1` followed by `0.1.1`.
-- Never overwrite, reuse, move, or unpublish an immutable version or Git tag.
+References: [npm tokens](https://docs.npmjs.com/about-access-tokens/),
+[trusted publishing](https://docs.npmjs.com/trusted-publishers/),
+[dist-tags](https://docs.npmjs.com/cli/v12/commands/npm-dist-tag/),
+[staged publishing](https://docs.npmjs.com/staged-publishing/).

@@ -11,7 +11,8 @@
   An AdRouter provider and disclosed sponsorship footer for OpenCode.
 </p>
 
-`@adrouter/opencode` supports OpenCode `>=1.18.4 <2`. It sends text-and-tool turns to the
+`@adrouter/opencode` supports OpenCode `>=1.18.4 <2`, builds against SDK `1.18.31`,
+and qualifies hosts `1.18.4`, `1.18.15`, and `1.18.31`. It sends text-and-tool turns to the
 isolated AdRouter integration API, keeps sponsor data out of model context, and renders the returned
 placement in OpenCode's `app_bottom` slot after the model turn.
 
@@ -51,7 +52,7 @@ Latest channel:
 opencode plugin --global @adrouter/opencode@latest
 ```
 
-Candidate channel for acceptance testing (beta.12 prepared; publication pending):
+Candidate channel for acceptance testing (beta.17 release input; verify publication before installing):
 
 ```sh
 opencode plugin --global @adrouter/opencode@candidate

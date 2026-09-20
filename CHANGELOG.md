@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.0-beta.17] - 2026-09-20
+
+- Build against OpenCode SDK 1.18.31 while retaining 1.18.4 and 1.18.15 compatibility checks.
+- Test packed imports against every qualified SDK and run a protected exact-registry host canary.
+- Record upload attempts and acceptance on the draft release; resume matching candidates without another upload.
+- Bound transient registry retries and make metadata finalization skip completed operations.
+- Preserve provider APIs, integration authentication, qualified models, and the three-row sponsor panel.
+
+
 ## [0.1.0-beta.16] - 2026-09-13
 
 - Surface authenticated canary stream errors directly and include bounded, non-sensitive event diagnostics when early routing metadata is absent.

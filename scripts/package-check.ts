@@ -110,40 +110,42 @@ try {
     assert(listing.includes(required), `Packed artifact is missing ${required}.`);
   }
 
-  const installDirectory = join(directory, "consumer");
-  mkdirSync(installDirectory);
-  await Bun.write(
-    join(installDirectory, "package.json"),
-    `${JSON.stringify(
-      {
-        private: true,
-        type: "module",
-        dependencies: {
-          "@adrouter/opencode": `file:${tarball}`,
-          "@opencode-ai/plugin": "1.18.4",
-          "@opentui/core": "0.4.5",
-          "@opentui/solid": "0.4.5",
-          "solid-js": "1.9.12",
+  for (const opencodeVersion of releaseManifest.npm.opencodeVersions) {
+    const installDirectory = join(directory, `consumer-${opencodeVersion}`);
+    mkdirSync(installDirectory);
+    await Bun.write(
+      join(installDirectory, "package.json"),
+      `${JSON.stringify(
+        {
+          private: true,
+          type: "module",
+          dependencies: {
+            "@adrouter/opencode": `file:${tarball}`,
+            "@opencode-ai/plugin": opencodeVersion,
+            "@opentui/core": "0.4.5",
+            "@opentui/solid": "0.4.5",
+            "solid-js": "1.9.12",
+          },
         },
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  await run(["bun", "install", "--ignore-scripts"], installDirectory);
-  await run(
-    [
-      "bun",
-      "-e",
-      `await import('@adrouter/opencode'); const server = await import('@adrouter/opencode/server'); await import('@adrouter/opencode/tui'); const config = {}; server.applyAdRouterConfig(config); if (config.provider?.adrouter?.npm !== ${JSON.stringify(`${manifest.name}@${manifest.version}`)}) throw new Error('Packed provider package is not exact')`,
-    ],
-    installDirectory,
-  );
+        null,
+        2,
+      )}\n`,
+    );
+    await run(["bun", "install", "--ignore-scripts"], installDirectory);
+    await run(
+      [
+        "bun",
+        "-e",
+        `await import('@adrouter/opencode'); const server = await import('@adrouter/opencode/server'); await import('@adrouter/opencode/tui'); const config = {}; server.applyAdRouterConfig(config); if (config.provider?.adrouter?.npm !== ${JSON.stringify(`${manifest.name}@${manifest.version}`)}) throw new Error('Packed provider package is not exact')`,
+      ],
+      installDirectory,
+    );
 
-  const packedManifest = JSON.parse(
-    readFileSync(join(installDirectory, "node_modules/@adrouter/opencode/package.json"), "utf8"),
-  );
-  assert(basename(packedManifest.main) === "index.js", "Installed legacy main is incorrect.");
+    const packedManifest = JSON.parse(
+      readFileSync(join(installDirectory, "node_modules/@adrouter/opencode/package.json"), "utf8"),
+    );
+    assert(basename(packedManifest.main) === "index.js", "Installed legacy main is incorrect.");
+  }
 } finally {
   rmSync(directory, { force: true, recursive: true });
 }
