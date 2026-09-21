@@ -22,12 +22,12 @@ Use scoped commits and protected main; no version/tag replacement. Preserve hist
 
 ## Step A: Compatibility and release recovery
 ### Status
-`in_progress`
+`done`
 ### Objective
 Build against the latest stable SDK and make release retries reconcile exact state.
 ### Tasks
-- [ ] Update SDK lock, three-version matrix, packaged checks, beta.17 metadata and public docs.
-- [ ] Add durable upload-start/acceptance receipts, guarded publication, bounded registry reads, and idempotent metadata operations.
+- [x] Update SDK lock, three-version matrix, packaged checks, beta.17 metadata and public docs.
+- [x] Add durable upload-start/acceptance receipts, guarded publication, bounded registry reads, and idempotent metadata operations.
 ### Relevant Files
 package.json, bun.lock, release-manifest.json, scripts/, test/release/, .github/workflows/publish.yml.
 ### Expected Changes
@@ -37,10 +37,10 @@ Product APIs, parked authentication experiment, unrelated working trees.
 ### Commands
 `bun run lint`; `bun run typecheck`; `bun test`; `bun run build`; `bun run release:policy`.
 ### Acceptance Criteria
-- [ ] Exact matching candidates resume without upload; uncertain outcomes stop; conflicts/auth errors fail immediately.
-- [ ] Absent aliases and identical deprecations cause no write.
+- [x] Exact matching candidates resume without upload; uncertain outcomes stop; conflicts/auth errors fail immediately.
+- [x] Absent aliases and identical deprecations cause no write.
 ### Validation Results
-Local lint, typecheck, 69 tests, build and release policy passed; clean-input release checks pending.
+Clean-input release checks and 70 tests passed. Recovery tests cover attempted and accepted uploads, registry visibility, candidate conflicts, and idempotent metadata writes.
 ### Findings / Notes
 Candidate OIDC and later NPM_TOKEN metadata credentials are separate.
 
@@ -48,12 +48,12 @@ Candidate OIDC and later NPM_TOKEN metadata credentials are separate.
 
 ## Step B: Governance
 ### Status
-`todo`
+`done`
 ### Objective
 Persist verified operation-specific guidance without changing other client implementations.
 ### Tasks
-- [ ] Update workspace/release/client AGENTS and installed AdRouter skill/reference.
-- [ ] Validate skill, references, scoped manifest checksums and preserve existing edits.
+- [x] Update workspace/release/client AGENTS and installed AdRouter skill/reference.
+- [x] Validate skill, references, scoped manifest checksums and preserve existing edits.
 ### Relevant Files
 Workspace and release AGENTS.md files; installed AdRouter skill; shared documentation manifest.
 ### Expected Changes
@@ -63,23 +63,23 @@ CLI/Desktop source, workflows, secrets, raw history.
 ### Commands
 Skill quick_validate.py, JSON/checksum verification, git diff --check.
 ### Acceptance Criteria
-- [ ] Correct per-client credentials, candidate lifecycle and operator-only authentication handoffs.
+- [x] Correct per-client credentials, candidate lifecycle and operator-only authentication handoffs.
 ### Validation Results
-Not run.
+Skill validation, scoped documentation checksums, and whitespace checks passed during candidate preparation.
 ### Findings / Notes
-No automatic browser/terminal launch; no temporary deprecation-message workaround.
+No authentication browser/terminal launch; no temporary deprecation-message workaround.
 
 ---
 
 ## Step C: Final verification and cleanup
 ### Status
-`todo`
+`done`
 ### Objective
 Publish the exact qualified candidate and retain public aliases.
 ### Tasks
-- [ ] Clean-input release:check, protected platform CI/history scan, PR merge and immutable tag.
-- [ ] Protected staging canaries, artifact inspection, exact-tag candidate dispatch and registry matrix.
-- [ ] Exact-candidate live/footer acceptance; record honest evidence and outstanding gates.
+- [x] Clean-input release:check, protected platform CI/history scan, PR merge and immutable tag.
+- [x] Protected staging canaries, artifact inspection, exact-tag candidate dispatch and registry matrix.
+- [x] Exact-candidate live/footer acceptance; record honest evidence and outstanding gates.
 ### Relevant Files
 Release docs, workflow, manifest and dated receipt.
 ### Expected Changes
@@ -89,12 +89,12 @@ beta/latest, package account policy, deployed Router.
 ### Commands
 `bun install --frozen-lockfile`; `bun run release:check`; protected GitHub workflows.
 ### Acceptance Criteria
-- [ ] Registry candidate matches recorded integrity; nine compatibility lanes pass.
-- [ ] beta/latest remain beta.16; GitHub release stays draft.
+- [x] Registry candidate matches recorded integrity; nine compatibility lanes pass.
+- [x] beta/latest remain beta.16; GitHub release stays draft.
 ### Validation Results
-Not run.
+Tag `v0.1.0-beta.17` resolves to `b9adb1524aa70cefb873acc2ab41fcb48e410259`. Staging run 35493498825 attempt 2 passed authenticated canaries and staged the SHA-256-verified tarball. Candidate run 35551316916 published through OIDC, verified registry integrity and provenance, and passed all nine host/OS lanes. Its live job failed only because the immutable verifier recognized `terminal_trailer` but not the Router's supported `stream_start` bottom placement; assistant output, settlement, and usage were present. PR #22 added a supplemental protected verifier without changing tagged product source, and run 35552620027 passed authenticated exact-registry execution on OpenCode 1.18.31. An isolated interactive OpenCode 1.18.31 session rendered the synthetic sponsor footer; exported metadata placed one ad at the bottom with settlement, and sponsor copy was absent from assistant text. npm `candidate` is beta.17, `beta` and `latest` remain beta.16, and the GitHub prerelease remains draft. See the dated compatibility-candidate receipt in `../../docs/`.
 ### Findings / Notes
-No publish attempt is a permission probe; operator handoff only for an actual required challenge.
+The original candidate workflow remains red as immutable historical evidence; the supplemental protected run establishes its missing live acceptance. Verifier recovery did not replace the tag or package, move public aliases, change secrets, or deploy Router.
 
 ## Follow-up Work
 Separately authorized promotion after acceptance.
@@ -103,6 +103,7 @@ Separately authorized promotion after acceptance.
 | Date | Decision | Rationale | Impact |
 | --- | --- | --- | --- |
 | 2026-09-20 | Retain older hosts; preserve OIDC; candidate only | Operator-approved plan | Matrix 1.18.4/1.18.15/1.18.31; public aliases unchanged |
+| 2026-09-21 | Keep beta.17 immutable and verify its live execution separately | Tagged assertion excluded valid `stream_start` bottom placement | Candidate remains published; supplemental protected run passed without promotion |
 
 ---
 
