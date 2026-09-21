@@ -129,13 +129,14 @@ async function verifyProviderExecution(
       if (record.phase === "done") flags.done = true;
       if (record.settlement && typeof record.settlement === "object") flags.settlement = true;
       if (record.usage && typeof record.usage === "object") flags.usage = true;
-      if (
-        record.injection &&
-        typeof record.injection === "object" &&
-        (record.injection as Record<string, unknown>).mode === "terminal_trailer" &&
-        (record.injection as Record<string, unknown>).placement === "bottom"
-      ) {
-        flags.bottom = true;
+      if (record.injection && typeof record.injection === "object") {
+        const injection = record.injection as Record<string, unknown>;
+        if (
+          (injection.mode === "terminal_trailer" || injection.mode === "stream_start") &&
+          injection.placement === "bottom"
+        ) {
+          flags.bottom = true;
+        }
       }
       for (const [childKey, child] of Object.entries(record)) inspect(child, childKey);
     };
